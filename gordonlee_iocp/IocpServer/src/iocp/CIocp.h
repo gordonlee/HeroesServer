@@ -46,12 +46,11 @@ public:
         return 0;
     }
 
-    int BindSocket(HANDLE socket) {
-
+    int BindSocket(DWORD _completionKey) {
         HANDLE hResult = ::CreateIoCompletionPort(
             socket,
             m_iocpHandle,
-            (DWORD)socket,
+            _completionKey,
             0);
         if (hResult == NULL) {
             return -1;
