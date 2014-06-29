@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Include">
+      <UniqueIdentifier>{2e8cf658-3c38-49cd-acc2-0e837779ce95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Core">
+      <UniqueIdentifier>{970483d7-4744-4fc3-9ec6-ed5ffe70c1b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Network">
+      <UniqueIdentifier>{bd219540-05f0-4c23-8d39-d8bf19f97d52}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Util">
+      <UniqueIdentifier>{c150e2b1-9284-4fdd-b9f1-07f5c90de973}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Thread">
+      <UniqueIdentifier>{8cc0e9d6-4a6f-4e89-a001-58b411d6a8c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game">
+      <UniqueIdentifier>{50819e5d-7e51-4476-8a94-adec6bc10de8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{cee008bd-d3a1-4df7-942d-ad6ca0a9dfb9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Include\Network\acceptor.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Network\console.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Network\iocp.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Network\net_util.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Network\socket.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Core\exception.cpp">
+      <Filter>Include\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Core\exception_handler.cpp">
+      <Filter>Include\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Util\string_util.cpp">
+      <Filter>Include\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Util\w32_util.cpp">
+      <Filter>Include\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Thread\lock.cpp">
+      <Filter>Include\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Thread\thread.cpp">
+      <Filter>Include\Thread</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Network\connection.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Include\Network\queue.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="message_base.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="mmo_server_message.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\acceptor.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\addr.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\console.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\iocp.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\iocp_struct.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\net_const.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\net_util.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\socket.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\socket_object.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Core\exception.h">
+      <Filter>Include\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Core\exception_handler.h">
+      <Filter>Include\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Core\types.h">
+      <Filter>Include\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Util\gdi_helper.h">
+      <Filter>Include\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Util\string_util.h">
+      <Filter>Include\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Util\w32_util.h">
+      <Filter>Include\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Thread\lock.h">
+      <Filter>Include\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Thread\thread.h">
+      <Filter>Include\Thread</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\connection.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\queue.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Network\network_event.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

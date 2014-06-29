@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="StableEchoClnt_win.c">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="IOCPEchoServ_win.c">
+      <Filter>source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{8689a019-d622-4731-806e-69ab5864c6fe}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
