@@ -2,15 +2,6 @@
 
 #include "common_header/base_header.h"
 
-typedef struct _SOCKET_TRAITS {
-    SOCKET Socket;
-    SOCKADDR_IN SocketAddr;
-    bool IsSetupAddr;
-    _SOCKET_TRAITS(void) : Socket(0), IsSetupAddr(false) {
-        // ::memset(&Overlapped, 0, sizeof(Overlapped));
-    }
-} SocketTraits;
-
 class TcpSocket {
  public:
      TcpSocket(void) {
@@ -24,44 +15,42 @@ class TcpSocket {
      }
 
      virtual int Initialize(const SOCKET _socket, const SOCKADDR_IN& _addr, const int _addrLen) {
-         m_Socket.Socket = _socket;
-         ::memcpy(&(m_Socket.SocketAddr), &_addr, _addrLen);
+         m_Socket = _socket;
+         ::memcpy(&(m_SocketAddr), &_addr, _addrLen);
 
-         int addrlen = sizeof(m_Socket.SocketAddr);
-         getpeername(m_Socket.Socket, (SOCKADDR *)&m_Socket.SocketAddr, &addrlen);
-         m_Socket.IsSetupAddr = true;
+         int addrlen = sizeof(m_SocketAddr);
+         getpeername(m_Socket, (SOCKADDR *)&m_SocketAddr, &addrlen);
+         m_IsSetupAddr = true;
          return 0;
      }
 
      // Create Listen socket
      virtual int Bind(int _listenPort) {
-         m_Socket.Socket = ::WSASocket(
-             AF_INET,
-             SOCK_STREAM,
-             0,
-             NULL,
-             0,
-             WSA_FLAG_OVERLAPPED);
-         m_Socket.SocketAddr.sin_family = AF_INET;
-         m_Socket.SocketAddr.sin_addr.s_addr = ::htonl(INADDR_ANY);
-         m_Socket.SocketAddr.sin_port = ::htons(_listenPort);
-         m_Socket.IsSetupAddr = true;
+         m_Socket = ::socket(AF_INET, SOCK_STREAM, 0);
+         if (m_Socket == INVALID_SOCKET) {
+             //TODO: log here.
+             return -1;
+         }
 
-         ::bind(
-             m_Socket.Socket,
-             reinterpret_cast<SOCKADDR *>(&m_Socket.SocketAddr),
-             sizeof(m_Socket.SocketAddr));
+         m_SocketAddr.sin_family = AF_INET;
+         m_SocketAddr.sin_addr.s_addr = ::htonl(INADDR_ANY);
+         m_SocketAddr.sin_port = ::htons(_listenPort);
+         m_IsSetupAddr = true;
 
-         int result = ::listen(m_Socket.Socket, SOMAXCONN);
+         ::bind(m_Socket,
+             reinterpret_cast<SOCKADDR *>(&m_SocketAddr),
+             sizeof(m_SocketAddr));
+
+         int result = ::listen(m_Socket, SOMAXCONN);
          if (result == SOCKET_ERROR) {
              return SOCKET_ERROR;
          }
-         return m_Socket.Socket;
+         return m_Socket;
      }
 
      virtual SOCKET Accept(SOCKADDR_IN* _remoteAddr, int* _remoteLength) {
          SOCKET acceptedSocket = ::accept(
-             m_Socket.Socket,
+             m_Socket,
              reinterpret_cast<SOCKADDR*>(_remoteAddr),
              _remoteLength);
 
@@ -74,20 +63,21 @@ class TcpSocket {
 
      virtual int Send(Buffer* _buffer, int _sendBytes) {
          if (_buffer && _sendBytes > 0) {
-             return ::send(m_Socket.Socket, _buffer->GetPtr(), _sendBytes, 0);
+             return ::send(m_Socket, _buffer->GetPtr(), _sendBytes, 0);
          }
          return -1;
      }
 
      virtual int RecvAsync(Buffer* _buffer, const LPOVERLAPPED _overlapped) {
-         DWORD recvBytes;
-         DWORD flags = 0;
-         WSABUF wsaBuf;
+         static DWORD recvBytes;
+         static DWORD flags = 0;
+         // TODO: see the result.
+         static WSABUF wsaBuf;
          wsaBuf.buf = _buffer->GetPtr();
          wsaBuf.len = BUFFER_SIZE;
 
          int result = ::WSARecv(
-             m_Socket.Socket,
+             m_Socket,
              &wsaBuf,
              1,
              &recvBytes,
@@ -104,13 +94,16 @@ class TcpSocket {
      }
 
      virtual void Close(bool isForce) {
-         ::closesocket(m_Socket.Socket);
+         ::closesocket(m_Socket);
      }
 
      SOCKET GetSocket() {
-         return m_Socket.Socket;
+         return m_Socket;
      }
 
  private:
-     SocketTraits m_Socket;
+     // SocketTraits m_Socket;
+     SOCKET m_Socket;
+     SOCKADDR_IN m_SocketAddr;
+     bool m_IsSetupAddr;
 };

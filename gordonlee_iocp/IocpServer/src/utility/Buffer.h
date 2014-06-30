@@ -20,6 +20,10 @@ class Buffer {
         return reinterpret_cast<char*>(m_Buffer);
     }
 
+    void Clear(void) {
+        ::memset(m_Buffer, 0, BUFFER_SIZE);
+    }
+
  private:
     byte m_Buffer[BUFFER_SIZE];
 };

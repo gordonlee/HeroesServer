@@ -10,8 +10,8 @@
 #include "socket/TcpSocket.h"
 
 typedef struct _PER_HANDLE_DATA {
-    TcpSocket Socket;
     OVERLAPPED Overlapped;
+    TcpSocket Socket;
     Buffer Buffer;
 } PER_HANDLE_DATA, *LPPER_HANDLE_DATA;
 
@@ -33,7 +33,30 @@ namespace {
 }
 
 
-DWORD WINAPI WorkerThread(LPVOID lpParam) {
+
+unsigned int __stdcall WorkerThread2(LPVOID lpParam) {
+    HANDLE hcp = (HANDLE)lpParam;
+    int retval;
+
+    while (1)
+    {
+        // 비동기 입출력 완료 기다리기
+        DWORD cbTransferred;
+        SOCKET client_sock;
+        LPPER_HANDLE_DATA ptr;
+        retval = GetQueuedCompletionStatus(
+            hcp, 
+            &cbTransferred, 
+            (LPDWORD)&client_sock, 
+            (LPOVERLAPPED*)&ptr, 
+            INFINITE);
+    }
+    return 0;
+}
+
+//DWORD WINAPI WorkerThread(LPVOID lpParam) {
+unsigned int __stdcall WorkerThread(LPVOID lpParam) {
+
     // TODO: write down worker thread.
     HANDLE handle = (HANDLE)lpParam;
     int retval;
@@ -45,19 +68,24 @@ DWORD WINAPI WorkerThread(LPVOID lpParam) {
         retval = ::GetQueuedCompletionStatus(
             handle,
             &cbTransferred,
-            (PULONG_PTR)client_socket,
+            (PULONG_PTR)&client_socket,
             (LPOVERLAPPED *)(&data),
             INFINITE);
+
+        DWORD lastError = GetLastError();
 
         if (retval == 0 || cbTransferred == 0) {
             if (retval == 0) {
                 DWORD temp1, temp2;
-                ::WSAGetOverlappedResult(
-                    data->Socket.GetSocket(), 
-                    &(data->Overlapped), 
-                    &temp1, 
-                    FALSE, 
-                    &temp2);
+                if (data != NULL)
+                {
+                    ::WSAGetOverlappedResult(
+                        data->Socket.GetSocket(),
+                        &(data->Overlapped),
+                        &temp1,
+                        FALSE,
+                        &temp2);
+                }
 
                 err_display("WSAGetOverlappedResult()");
             }
@@ -79,6 +107,10 @@ DWORD WINAPI WorkerThread(LPVOID lpParam) {
                 printf("READ 데이터 : %s\n", data->Buffer.GetPtr());
 
                 data->Socket.Send(&(data->Buffer), cbTransferred);
+
+                // MEMO: 여기서 굳이 버퍼 초기화를 할 필요는 없지만, 출력을 위해서 비워둔다.
+                // 또, send가 WSASend 가 되면, 오히려 센드버퍼는 지우면 안된다. (버퍼를 따로 둬얄듯)
+                data->Buffer.Clear();
             }
 
             ::ZeroMemory(&(data->Overlapped), sizeof(data->Overlapped));
@@ -116,7 +148,6 @@ class Network sealed {
          m_Iocp.StartIocpThread(numberOfThread);
 
          // create listen socket.
-         
          m_ListenSocket.Bind(5150);
      }
 
@@ -130,20 +161,22 @@ class Network sealed {
          //PER_HANDLE_DATA *PerHandleData = (LPPER_HANDLE_DATA) ::GlobalAlloc(GPTR, sizeof(PER_HANDLE_DATA));
 
          LPPER_HANDLE_DATA perHandleData = MakeClientSession(Accepted, saRemote, remoteLen);
-         m_Iocp.BindSocket(static_cast<DWORD>(Accepted));
+         m_Iocp.BindSocket((HANDLE)(Accepted), static_cast<DWORD>(Accepted));
 
          printf("[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
              inet_ntoa(saRemote.sin_addr), ntohs(saRemote.sin_port));
          printf("Socket number %d connected\n", Accepted);
 
          // start socket's i/o job
+         // MEMO: 초기화 안된 Overlapped 쓰면 객체 뻑남.
+         ZeroMemory(&(perHandleData->Overlapped), sizeof(perHandleData->Overlapped));
+
          if ( perHandleData->Socket.RecvAsync(
                 &(perHandleData->Buffer), 
                 &(perHandleData->Overlapped)
                 ) != 0) {
              err_display("RecvAsync() Error at main thread");
          }
-
          return true;
      }
 
