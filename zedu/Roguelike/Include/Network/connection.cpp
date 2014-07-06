@@ -68,6 +68,8 @@ namespace zedu {
 
 		m_hIOCP = NULL;
 		m_bAsyncCloseSignal = false;
+		m_bDisconnectSignal = false;
+		m_bDisconnectEventPosted = false;
 
 		m_recvBytes = 0;
 		m_sendBytes = 0;
@@ -148,7 +150,8 @@ namespace zedu {
 		// SendQueue에 있으나 WriteFile()되지 않은 부분이 있다면 처리
 		if( m_pSendQueue->Size() - m_sendingBytes > 0 )
 		{
-			if( IsConnected() )
+			
+			if( !m_bDisconnectSignal && IsConnected() && !m_bDisconnectEventPosted )
 			{
 				ProcWriteFile();
 				bSendReq = true;
@@ -199,18 +202,30 @@ namespace zedu {
 	
 	void IOCPConnection::OnDisconnect( int flag )
 	{
-		m_disconnectReason = flag;
+		
 		bool bNotifyClosed = false;
 
 		{
 			THREAD_SYNC( m_closeCS );
+
+			if( !m_bDisconnectSignal )
+			{
+				m_bDisconnectSignal = true;
+				m_disconnectReason = flag;
+			}
 		
 			// 쿼리 갯수가 0이라면?
 			if( GetPendingQueryCount() == 0 )
 			{
-				if( IsConnected() )
-					m_bConnected = false;
-
+				if( !m_bDisconnectEventPosted )
+				{
+					if( IsConnected() )
+					{
+						m_bConnected = false;
+						Close();
+					}
+				}
+				m_bDisconnectEventPosted = true;
 				bNotifyClosed = true;
 			}
 		}
@@ -271,15 +286,16 @@ namespace zedu {
 
 	bool IOCPConnection::ProcWriteFile()
 	{
-		if( !IsConnected() )
-			return false;
+		if( !IsConnected() ) return false;
+		if( m_bDisconnectSignal ) return false;
+		if( m_bDisconnectEventPosted ) return false;
+
+		InterlockedIncrement( &m_pendingSendQueryCount );
 
 		int len = m_pSendQueue->Size() - m_sendingBytes;
 		int sendSize = (IOCP::BUFFER_SIZE > len ? len : IOCP::BUFFER_SIZE);
 
 		OverlappedIO* pSendOverlapped = m_pSendOverlapped;
-		
-		InterlockedIncrement( &m_pendingSendQueryCount );
 
 		m_dwSendFlag = 0;
 		m_sendWSABUF.buf = const_cast<char*>( m_pSendQueue->GetBuf() + m_sendingBytes);
@@ -393,18 +409,23 @@ namespace zedu {
 		return false;
 	}
 
-	long IOCPConnection::GetPendingQueryCount()
+	volatile long IOCPConnection::GetPendingQueryCount()
 	{
 		return m_pendingRecvQueryCount + m_pendingSendQueryCount;
 	}
 
-	long IOCPConnection::GetPendingRecvCount()
+	volatile long IOCPConnection::GetPendingRecvCount()
 	{
 		return m_pendingRecvQueryCount;
 	}
 
-	long IOCPConnection::GetPendingSendCount()
+	volatile long IOCPConnection::GetPendingSendCount()
 	{
 		return m_pendingSendQueryCount;
+	}
+
+	volatile bool IOCPConnection::CheckDisconnectSignal()
+	{
+		return m_bDisconnectSignal;
 	}
 }

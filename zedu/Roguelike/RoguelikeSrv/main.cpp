@@ -1,5 +1,6 @@
 #include <winsock2.h>
 #include "Core/logger.h"
+#include "Core/object_remover.h"
 #include "Core/types.h"
 #include "Game/game_env.h"
 #include "Game/game_message.h"
@@ -8,6 +9,7 @@
 #include "Network/console.h"
 #include "Network/connection.h"
 #include "Network/iocp.h"
+#include "Thread/thread.h"
 #include "Util/gdi_helper.h"
 #include "Util/string_util.h"
 #include <vector>
@@ -27,10 +29,13 @@ const int INPUT_BOX_HEIGHT = 20; // 하단의 입력창 세로 크기
 const int CONSOLE_FONT_HEIGHT = 14;	// 콘솔 폰트 세로 크기
 const char* CONSOLE_FONT = "Lucida Console";
 
+long g_connectionNumber = 0;
 int g_gameServerViewMode = 0; // 0:main, 1:status
 std::list<IOCPConnection*> g_connList;
 
+ObjectRemover<IOCPConnection*> g_objectRemover;
 CriticalSection g_logCS;
+CriticalSection g_connectionCS;
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -83,8 +88,8 @@ void SendPacket( ISocketConnection* pConnection, MSG_Value* pMsg )
 	SOCKET sock = pConn->GetSocketHandle();
 	int packetSize = pMsg->size+sizeof(MSG_Value);
 	
-	cprint( "[%s](%d) send packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
-			peerAddr, sock, packetSize, pMsg->size, pMsg->flag, pMsg->checksum );
+	cprint( "(%s)[%s](%d) send packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
+			GetThreadName(), peerAddr, sock, packetSize, pMsg->size, pMsg->flag, pMsg->checksum );
 
 	pConn->Write( pMsg, packetSize );
 }
@@ -96,40 +101,51 @@ struct MyEventReceiver : public INetworkEventReceiver
 {
 	virtual IConnection* CreateConnection(const Socket& sock )
 	{
-		IOCPConnection* pConn = NULL;
-		for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
-		{
-			if( (*it)->IsConnected() )
-				continue;
-			
-			pConn = (*it);
-			break;
-		}
-		
-		if( pConn == NULL )
-		{
-			pConn = new IOCPConnection( NULL, sock );
-			g_connList.push_back( pConn );
-		}
-		else
-		{
-			//pConn->Init( NULL );
-			pConn->SetSocket( sock );
-		}
+		THREAD_SYNC( g_connectionCS );
+		InterlockedIncrement( &g_connectionNumber );
+
+		IOCPConnection* pConn = new IOCPConnection( NULL, sock );
+		pConn->SetConnNumber( g_connectionNumber );
+
+		g_connList.push_back( pConn );
 		return pConn;
+
+		//IOCPConnection* pConn = NULL;
+		//for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
+		//{
+		//	if( (*it)->IsConnected() )
+		//		continue;
+		//	
+		//	pConn = (*it);
+		//	break;
+		//}
+		//
+		//if( pConn == NULL )
+		//{
+		//	
+		//}
+		//else
+		//{
+		//	
+		//	pConn->SetSocket( sock );
+		//	pConn->Init( NULL );
+		//}
+		//return pConn;
 	}
 
 	virtual void OnDisconnect( int threadId, IConnection* pConnection )
 	{
+		THREAD_SYNC( g_connectionCS );
+
 		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
 		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
 		SOCKET sock = pConn->GetSocketHandle();
 
-		cprint( "[%s](%d) connection closed(%d) \n", peerAddr, sock, pConn->GetDisconnectReason() );
+		cprint( "(%s)[%s](#%d, %d) connection closed(%d) \n", GetThreadName(), peerAddr, pConn->GetConnNumber(), sock, pConn->GetDisconnectReason() );
 		InvalidateRect( hWnd, NULL, false );
 		
-		//g_connList.remove( pConn );
-		//delete pConnection;
+		g_connList.remove( pConn );
+		g_objectRemover.AddObject( pConn );
 	}
 
 	virtual bool OnAccept( int threadId, IAcceptor* pAcceptor, IConnection* pConnection )
@@ -138,7 +154,7 @@ struct MyEventReceiver : public INetworkEventReceiver
 		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
 		SOCKET sock = pConn->GetSocketHandle();
 
-		cprint( "[%s](%d) connection accepted() \n", peerAddr, sock );
+		cprint( "(%s)[%s](#%d, %d) connection accepted() \n", GetThreadName(), peerAddr, pConn->GetConnNumber(), sock );
 		InvalidateRect( hWnd, NULL, false );
 		return true;
 	}
@@ -148,7 +164,8 @@ struct MyEventReceiver : public INetworkEventReceiver
 		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
 		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
 		SOCKET sock = pConn->GetSocketHandle();
-		cprint( "[%s](%d) >> recv %d bytes \n", peerAddr, sock, size );
+		const char* threadName = GetThreadName();
+		cprint( "(%s)[%s](#%d, %d) >> recv %d bytes \n", threadName, peerAddr,  pConn->GetConnNumber(), sock, size );
 
 		MSG_Value msg;
 		int readBytes = pConn->Peek( &msg, sizeof(MSG_Value) );
@@ -158,7 +175,7 @@ struct MyEventReceiver : public INetworkEventReceiver
 		int packetSize = sizeof(MSG_Value)+msg.size;
 		if( pConn->Reserve( packetSize ) )
 		{
-			cprint( "[%s](%d) reserve %d bytes \n", peerAddr, sock, packetSize );
+			cprint( "(%s)[%s](#%d, %d) reserve %d bytes \n", threadName, peerAddr, pConn->GetConnNumber(), sock, packetSize );
 		}
 
 		if( pConn->Size() < msg.size )
@@ -181,8 +198,8 @@ struct MyEventReceiver : public INetworkEventReceiver
 			int nil = 0;
 		}
 		
-		cprint( "[%s](%d) recv packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
-			peerAddr, sock, pConn->Size(), pMsg->size, pMsg->flag, pMsg->checksum );
+		cprint( "(%s)[%s](#%d, %d) recv packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
+			GetThreadName(), peerAddr, pConn->GetConnNumber(), sock, pConn->Size(), pMsg->size, pMsg->flag, pMsg->checksum );
 
 		SendPacket( pConn, pMsg );
 
@@ -196,7 +213,7 @@ struct MyEventReceiver : public INetworkEventReceiver
 		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
 		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
 		SOCKET sock = pConn->GetSocketHandle();
-		cprint( "[%s](%d) << send %d bytes \n", peerAddr, sock, size );
+		cprint( "(%s)[%s](#%d, %d) << send %d bytes \n", GetThreadName(), peerAddr, pConn->GetConnNumber(), sock, size );
 
 		InvalidateRect( hWnd, NULL, false );
 	}
@@ -259,6 +276,14 @@ void ShutdownServer()
 	cprint("ok\n");
 }
 
+void UpdateServer()
+{
+	if( g_objectRemover.Count() > 256 )
+	{
+		g_objectRemover.DelObject();
+	}
+}
+
 void ProcCommand( const char* buf )
 {
 	cprint( buf );
@@ -301,6 +326,8 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 	   {
 		   TranslateMessage(&msg);
 		   DispatchMessage(&msg);
+
+		   UpdateServer();
 	   }
 
 		UnhookWindowsHookEx( hKeyboardHook );
@@ -340,8 +367,8 @@ void DrawStatus(HDC hDC)
 	for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
 	{
 		IOCPConnection* pConn = *it;
-		statConsole.Printf("%d. conn[%d]=%s, total recv/send bytes=(%d/%d), pending recv/send(%d/%d) \n", 
-			i++, pConn->GetSocketHandle(),
+		statConsole.Printf("%d. #%d conn[%d]=%s, total bytes(r/w)=(%d/%d), pending r/w=(%d/%d) \n", 
+			i++, pConn->GetConnNumber(), pConn->GetSocketHandle(),
 			pConn->IsConnected() ? "connected" : "disconnected",
 			pConn->GetTotalRecvBytes(), pConn->GetTotalSendBytes(),
 			pConn->GetPendingRecvCount(), pConn->GetPendingSendCount()

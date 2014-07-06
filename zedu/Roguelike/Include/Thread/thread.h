@@ -10,4 +10,6 @@ namespace zedu {
 	void XSetThreadName( __int32 threadID, const char* threadName );
 
 	inline void SetThreadName( __int32 threadID, const char* threadName ) { XSetThreadName(threadID, threadName); }
+
+	const char* GetThreadName();
 }

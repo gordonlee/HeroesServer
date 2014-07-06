@@ -107,7 +107,7 @@ namespace zedu {
 		}
 		else
 		{
-			closesocket( hFileHandle );
+			::closesocket( hFileHandle );
 		}
 
 		return true;
@@ -123,7 +123,7 @@ namespace zedu {
 			pConnection->OnRecvCompletionEvent( size );
 			if( size < 1 )
 			{
-				pConnection->Close();
+				pConnection->OnDisconnect( 1 );
 				break;
 			}
 
@@ -142,6 +142,11 @@ namespace zedu {
 			}
 
 			// 다른 스레드에서 disconnect 이벤트가 발생했다면 연결 끊어짐 처리
+			if( pConnection->CheckDisconnectSignal() || !pConnection->IsConnected() )
+			{
+				pConnection->OnDisconnect( 2 );
+				break;
+			}
 			break;
 
 		case OverlappedIO::IO_SEND:
@@ -156,6 +161,13 @@ namespace zedu {
 			if( size < 1 )
 			{
 				pConnection->OnDisconnect( 3 );
+				break;
+			}
+
+			// 다른 스레드에서 disconnect 이벤트가 발생했다면 연결 끊어짐 처리
+			if( pConnection->CheckDisconnectSignal() || !pConnection->IsConnected() )
+			{
+				pConnection->OnDisconnect( 4 );
 				break;
 			}
 

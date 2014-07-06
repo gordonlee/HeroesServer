@@ -89,10 +89,13 @@ namespace zedu {
 		HANDLE m_hIOCP;
 
 		volatile bool m_bAsyncCloseSignal;
+		volatile bool m_bDisconnectSignal;
+		volatile bool m_bDisconnectEventPosted;
 
 		int m_recvBytes;
 		int m_sendBytes;
 		int m_disconnectReason;
+		long m_connectionNumber;
 
 	public:
 		IOCPConnection( OverlappedAllocator* pAllocator, const Socket& sock );
@@ -113,9 +116,10 @@ namespace zedu {
 		virtual bool Close(); // 전송중인 버퍼를 무시하고 접속종료
 		void AsyncClose(); // 전송중인 버퍼를 모두 전송후 접속죵료
 
-		long GetPendingQueryCount();
-		long GetPendingRecvCount();
-		long GetPendingSendCount();
+		volatile long GetPendingQueryCount();
+		volatile long GetPendingRecvCount();
+		volatile long GetPendingSendCount();
+		volatile bool CheckDisconnectSignal();
 
 		int GetTotalRecvBytes() const { return m_recvBytes; }
 		int GetTotalSendBytes() const { return m_sendBytes; }
@@ -124,8 +128,10 @@ namespace zedu {
 			m_socket = sock;
 		}
 		int GetDisconnectReason() const { return m_disconnectReason; }
+		void SetConnNumber( long num ) { m_connectionNumber = num; }
+		long GetConnNumber() const { return m_connectionNumber; }
 
-	private:
+	//private:
 		void Init( OverlappedAllocator* pAllocator );
 
 	protected:

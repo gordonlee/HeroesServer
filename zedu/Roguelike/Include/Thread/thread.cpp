@@ -35,4 +35,9 @@ namespace zedu {
 		{
 		}
 	}
+
+	const char* GetThreadName()
+	{
+		return g_threadInfo.threadName;
+	}
 }

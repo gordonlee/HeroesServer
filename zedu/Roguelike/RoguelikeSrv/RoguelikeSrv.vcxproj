@@ -82,6 +82,7 @@
     <ClCompile Include="..\Include\Core\exception.cpp" />
     <ClCompile Include="..\Include\Core\exception_handler.cpp" />
     <ClCompile Include="..\Include\Core\logger.cpp" />
+    <ClCompile Include="..\Include\Core\object_remover.cpp" />
     <ClCompile Include="..\Include\Network\acceptor.cpp" />
     <ClCompile Include="..\Include\Network\connection.cpp" />
     <ClCompile Include="..\Include\Network\console.cpp" />
@@ -101,6 +102,7 @@
     <ClInclude Include="..\Include\Core\exception.h" />
     <ClInclude Include="..\Include\Core\exception_handler.h" />
     <ClInclude Include="..\Include\Core\logger.h" />
+    <ClInclude Include="..\Include\Core\object_remover.h" />
     <ClInclude Include="..\Include\Core\types.h" />
     <ClInclude Include="..\Include\Network\acceptor.h" />
     <ClInclude Include="..\Include\Network\addr.h" />

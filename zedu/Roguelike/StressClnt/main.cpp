@@ -25,16 +25,17 @@ const int INPUT_BOX_HEIGHT = 20; // 하단의 입력창 세로 크기
 const int CONSOLE_FONT_HEIGHT = 14;	// 콘솔 폰트 세로 크기
 const char* CONSOLE_FONT = "Lucida Console";
 
-int g_workerCount = 16;
+int g_workerCount = 32;
 int g_framePerSec = 20;
 int g_frameCount = 0;
-int g_closeRatio = 10;
+int g_closeRatio = 15;
 int g_sendPerFrame = 1;
 bool g_bWork = false;
 
 Addr g_addr( GAME_SERVER_IP, GAME_SERVER_PORT );
 
 int g_viewMode = 0; // 0:main, 1:status
+long g_connNumber = 0;
 
 class StressWorker : public SyncStreamConnection
 {
@@ -47,6 +48,7 @@ public:
 
 	int m_checksumErrorCount;
 	int m_memcmpErrorCount;
+	long m_connNumber;
 
 public:
 	StressWorker()
@@ -68,6 +70,12 @@ public:
 		delete m_pReadQueue;
 	}
 
+	virtual bool Connect( const Addr& addr )
+	{
+		InterlockedIncrement( &g_connNumber );
+		m_connNumber = g_connNumber;
+		return SyncStreamConnection::Connect( addr );
+	}
 	virtual int Write( const void* pBuf, size_t len )
 	{
 		m_bPacketResolved = false;
@@ -189,7 +197,7 @@ void ReadFromNetwork()
 				const char* peerAddr = (*it)->GetPeerAddress().GetAddr();
 				SOCKET sock = (*it)->GetSocketHandle();
 
-				cprint( "[%s](%d) >> recv %d bytes \n", peerAddr, sock, readBytes );
+				cprint( "[%s](#%d, %d) >> recv %d bytes \n", peerAddr, pWorker->m_connNumber, sock, readBytes );
 				pWorker->m_pReadQueue->Write( buf, readBytes );
 
 				if( readBytes < sizeof(MSG_Value) ) 
@@ -202,7 +210,7 @@ void ReadFromNetwork()
 				if( pWorker->m_pReadQueue->Size() < packetSize )
 					continue;
 
-				cprint( "[%s](%d) >> recv packet(%d bytes)\n", peerAddr, sock, packetSize );
+				cprint( "[%s](#%d, %d) >> recv packet(%d bytes)\n", peerAddr, pWorker->m_connNumber, sock, packetSize );
 				
 
 				// 유효성 체크
@@ -212,7 +220,7 @@ void ReadFromNetwork()
 				if( !bChecksumOk ) pWorker->m_checksumErrorCount++;
 				if( !bMemcmpOk ) pWorker->m_memcmpErrorCount++;
 
-				cprint( "[%s](%d) >> checksum %s, memcmp %s \n", peerAddr, sock, 
+				cprint( "[%s](#%d, %d) >> checksum %s, memcmp %s \n", peerAddr, pWorker->m_connNumber, sock, 
 					bChecksumOk ? "ok" : "FAILED", bMemcmpOk ? "ok" : "FAILED" );
 
 				pWorker->m_pReadQueue->Read( NULL, packetSize );
@@ -224,7 +232,7 @@ void ReadFromNetwork()
 
 				const char* peerAddr = (*it)->GetPeerAddress().GetAddr();
 				SOCKET sock = (*it)->GetSocketHandle();
-				GetMainConsole().Printf( "[%s](%d) connectio closed(from server)\n", peerAddr, sock );
+				GetMainConsole().Printf( "[%s](#%d, %d) connectio closed(from server)\n", peerAddr, pWorker->m_connNumber, sock );
 			}
 
 			SyncStreamConnection::Select( connectionList );
@@ -245,15 +253,6 @@ void UpdateClient()
 	{
 		if( (*it)->IsConnected() )
 		{
-			int v = rand() % 100;
-			if( v < g_closeRatio )
-			{
-				(*it)->Close();
-
-				const char* peerAddr = (*it)->GetPeerAddress().GetAddr();
-				SOCKET sock = (*it)->GetSocketHandle();
-				cprint( "[%s](%d) connection closed(from client)\n", peerAddr, sock );
-			}
 		}
 		else if( !bPerFrameConnect )
 		{
@@ -266,8 +265,6 @@ void UpdateClient()
 			bPerFrameConnect = true;
 		}
 	}
-
-	
 }
 
 void SendPacket( ISocketConnection* pConn, zedu::byte* pBuf, int len )
@@ -299,6 +296,29 @@ void SendPacket( ISocketConnection* pConn, zedu::byte* pBuf, int len )
 	delete pSendBuf;
 }
 
+void DisconnectPerSec()
+{
+	if( !g_bWork )
+		return;
+
+	for( std::vector<SyncStreamConnection*>::iterator it = connectionList.begin(); 
+		it != connectionList.end(); it++ )
+	{
+		if( (*it)->IsConnected() )
+		{
+			int v = rand() % 100;
+			if( v < g_closeRatio )
+			{
+				(*it)->Close();
+
+				const char* peerAddr = (*it)->GetPeerAddress().GetAddr();
+				SOCKET sock = (*it)->GetSocketHandle();
+				cprint( "[%s](%d) connection closed(from client)\n", peerAddr, sock );
+			}
+		}
+	}
+}
+
 void SendPerSec()
 {
 	if( !g_bWork )
@@ -311,7 +331,7 @@ void SendPerSec()
 
 		if( pConn->IsConnected() )
 		{
-			int dataLen = 65532;
+			int dataLen = rand() % 65532;
 			char* pData = new char[dataLen];
 			SendPacket( pConn, (zedu::byte*)pData, dataLen );
 			delete pData;
@@ -403,6 +423,28 @@ void ProcCommand( const char* buf )
 		{
 			g_bWork = false;
 		}
+		else if( tokens[0] == "!close" )
+		{
+			SyncStreamConnection* pConn = NULL;
+			for( std::vector<SyncStreamConnection*>::iterator it = connectionList.begin(); 
+				it != connectionList.end(); it++ )
+			{
+				if( (*it)->IsConnected() )
+				{
+					pConn = *it;
+					break;
+				}
+			}
+			if( pConn )
+			{
+				int dataLen = 65532;
+				char* pData = new char[dataLen];
+				SendPacket( pConn, (zedu::byte*)pData, dataLen );
+				delete pData;
+
+				pConn->Close();
+			}
+		}
 		else
 		{
 			SyncStreamConnection* pConn = *(connectionList.begin());
@@ -448,19 +490,24 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 			if( g_frameCount++ < g_framePerSec )
 			{
 				UpdateClient();
+
+				if( g_frameCount % 2 > 0 )
+				{
+					for( int i = 0; i < g_sendPerFrame; i++ )
+					{
+						SendPerSec();
+					}
+				}
 			}
 
 			if( GetMiliSeconds() - elapsedTime > 1000 )
 			{
+				DisconnectPerSec();
+				// PerSec, send 
+				
 				elapsedTime = GetMiliSeconds();
 				g_frameCount = 0;
 				InvalidateRect( hWnd, NULL, false );
-			}
-
-			// PerSec, send 
-			for( int i = 0; i < g_sendPerFrame; i++ )
-			{
-				SendPerSec();
 			}
 		}
 
@@ -502,8 +549,8 @@ void DrawStatus(HDC hdc)
 		SyncStreamConnection* pConn = *it;
 		StressWorker* pWorker = dynamic_cast<StressWorker*>(pConn);
 
-		statusConsole.Printf("%d.(%d)=%s total recv/send=(%d/%d), error checksum/memcmp(%d/%d) \n", 
-			i++, pConn->GetSocketHandle(), 
+		statusConsole.Printf("%d.(#%d)(%d)=%s total recv/send=(%d/%d), error checksum/memcmp(%d/%d) \n", 
+			i++, pWorker->m_connNumber, pConn->GetSocketHandle(), 
 			pConn->IsConnected() ? "connected" : "disconnected", 
 			pConn->GetTotalRecvBytes(), pConn->GetTotalSendBytes(),
 			pWorker->m_checksumErrorCount, pWorker->m_memcmpErrorCount

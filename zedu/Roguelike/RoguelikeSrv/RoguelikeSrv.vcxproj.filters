@@ -69,6 +69,9 @@
     <ClCompile Include="..\Include\Core\logger.cpp">
       <Filter>Include\Core</Filter>
     </ClCompile>
+    <ClCompile Include="..\Include\Core\object_remover.cpp">
+      <Filter>Include\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Include\Network\acceptor.h">
@@ -138,6 +141,9 @@
       <Filter>Game</Filter>
     </ClInclude>
     <ClInclude Include="..\Include\Core\logger.h">
+      <Filter>Include\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Core\object_remover.h">
       <Filter>Include\Core</Filter>
     </ClInclude>
   </ItemGroup>
