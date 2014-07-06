@@ -2,7 +2,10 @@
 
 namespace zedu {
 	typedef unsigned int		uint32;
+	typedef unsigned short		ushort;
+	typedef unsigned long		ulong;
 	typedef char				byte;
+	
 
 	struct Types
 	{

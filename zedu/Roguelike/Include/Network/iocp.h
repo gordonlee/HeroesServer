@@ -18,6 +18,8 @@ namespace zedu {
 	private:
 		IOCPTag* m_pTag;
 		uint32 m_threadCount;
+		volatile long m_currentThreadCount;
+		volatile long m_workingThreadCount;
 	
 	public:
 		IOCP( INetworkEventReceiver* pReceiver );
@@ -31,6 +33,9 @@ namespace zedu {
 
 		bool StartThreadPool( uint32 threadNum );
 		bool EndThreadPool();
+
+		long GetCurrentThreadCount() const { return m_currentThreadCount; }
+		long GetWorkingThreadCount() const { return m_workingThreadCount; }
 
 	private:
 		static unsigned int __stdcall WorkerThread( void* pArg );

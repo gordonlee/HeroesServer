@@ -2,28 +2,31 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source">
-      <UniqueIdentifier>{729ff5fd-fbb6-4eae-a071-de951555b46b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Include">
-      <UniqueIdentifier>{98214b39-e3ae-4ed7-a62e-f31ab0956a3e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Include\Core">
-      <UniqueIdentifier>{46c35c92-b0d5-40fc-a2ce-be4c44e07e66}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Include\Network">
-      <UniqueIdentifier>{c68b56ce-19fb-4de7-9fb0-668de148f01a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Include\Thread">
-      <UniqueIdentifier>{82c58b1b-d29a-4d7f-9394-7089b0c54df6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Include\Util">
-      <UniqueIdentifier>{c62f9805-f746-4397-90b0-b6542bd75461}</UniqueIdentifier>
+      <UniqueIdentifier>{47df49d7-1b94-486a-bd6d-2eccfec452e1}</UniqueIdentifier>
     </Filter>
     <Filter Include="Game">
-      <UniqueIdentifier>{7b1280a7-5eab-431a-908c-c2e838d52a6d}</UniqueIdentifier>
+      <UniqueIdentifier>{86e688c8-3e9a-4728-a31e-8c7602e3e487}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{46fa8f81-fd80-4f31-a211-29ec36c3c160}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Core">
+      <UniqueIdentifier>{3e7b531f-4ac2-487d-ae1c-da7708db893d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Network">
+      <UniqueIdentifier>{6a6c33dc-2220-4e87-8518-f385e9bcdc3e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Thread">
+      <UniqueIdentifier>{5dbf3679-ece9-462b-bce8-6f291cb70236}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include\Util">
+      <UniqueIdentifier>{a2834a20-a61a-48ed-b0de-c69536ea15f4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Game\game_env.cpp">
+      <Filter>Game</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -54,6 +57,9 @@
     <ClCompile Include="..\Include\Network\socket.cpp">
       <Filter>Include\Network</Filter>
     </ClCompile>
+    <ClCompile Include="..\Include\Network\syncstream_connection.cpp">
+      <Filter>Include\Network</Filter>
+    </ClCompile>
     <ClCompile Include="..\Include\Thread\lock.cpp">
       <Filter>Include\Thread</Filter>
     </ClCompile>
@@ -63,16 +69,10 @@
     <ClCompile Include="..\Include\Util\string_util.cpp">
       <Filter>Include\Util</Filter>
     </ClCompile>
-    <ClCompile Include="..\Include\Util\w32_util.cpp">
+    <ClCompile Include="..\Include\Util\timer.cpp">
       <Filter>Include\Util</Filter>
     </ClCompile>
-    <ClCompile Include="..\Game\game_env.cpp">
-      <Filter>Game</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Include\Network\syncstream_connection.cpp">
-      <Filter>Include\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Include\Util\timer.cpp">
+    <ClCompile Include="..\Include\Util\w32_util.cpp">
       <Filter>Include\Util</Filter>
     </ClCompile>
     <ClCompile Include="..\Include\Core\logger.cpp">
@@ -80,6 +80,12 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Game\game_env.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Game\game_message.h">
+      <Filter>Game</Filter>
+    </ClInclude>
     <ClInclude Include="..\Include\Core\exception.h">
       <Filter>Include\Core</Filter>
     </ClInclude>
@@ -125,6 +131,9 @@
     <ClInclude Include="..\Include\Network\socket_object.h">
       <Filter>Include\Network</Filter>
     </ClInclude>
+    <ClInclude Include="..\Include\Network\syncstream_connection.h">
+      <Filter>Include\Network</Filter>
+    </ClInclude>
     <ClInclude Include="..\Include\Thread\lock.h">
       <Filter>Include\Thread</Filter>
     </ClInclude>
@@ -137,19 +146,10 @@
     <ClInclude Include="..\Include\Util\string_util.h">
       <Filter>Include\Util</Filter>
     </ClInclude>
-    <ClInclude Include="..\Include\Util\w32_util.h">
+    <ClInclude Include="..\Include\Util\timer.h">
       <Filter>Include\Util</Filter>
     </ClInclude>
-    <ClInclude Include="..\Game\game_env.h">
-      <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Network\syncstream_connection.h">
-      <Filter>Include\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Game\game_message.h">
-      <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Include\Util\timer.h">
+    <ClInclude Include="..\Include\Util\w32_util.h">
       <Filter>Include\Util</Filter>
     </ClInclude>
   </ItemGroup>

@@ -2,6 +2,8 @@
 #include <assert.h>
 #include <algorithm>
 #include "connection.h"
+#include "Core/logger.h"
+#include "Game/game_env.h"
 #include "iocp.h"
 #include "iocp_struct.h"
 #include "queue.h"
@@ -24,6 +26,7 @@ namespace zedu {
 
 	IOCPConnection::~IOCPConnection()
 	{
+		delete m_pWaitQueue;
 		delete m_pSendQueue;
 		delete m_pRecvQueue;
 
@@ -40,8 +43,9 @@ namespace zedu {
 
 	void IOCPConnection::Init( OverlappedAllocator* pAllocator )
 	{
-		m_pRecvQueue = IQueue::CreateQueue( 8192 );
-		m_pSendQueue = IQueue::CreateQueue( 8192 );
+		m_pRecvQueue = IQueue::CreateQueue( GAME_QUEUE_SIZE );
+		m_pSendQueue = IQueue::CreateQueue( GAME_QUEUE_SIZE );
+		m_pWaitQueue = IQueue::CreateQueue( GAME_QUEUE_SIZE );
 
 		m_pAllocator = pAllocator ? pAllocator : OverlappedAllocator::DefaultAllocator();
 		{
@@ -64,6 +68,15 @@ namespace zedu {
 
 		m_hIOCP = NULL;
 		m_bAsyncCloseSignal = false;
+
+		m_recvBytes = 0;
+		m_sendBytes = 0;
+		m_disconnectReason = 0;
+	}
+
+	bool IOCPConnection::Connect( const Addr& addr )
+	{
+		return true;
 	}
 
 	bool IOCPConnection::Close()
@@ -108,6 +121,9 @@ namespace zedu {
 		{
 			// TODO+ 에러!
 		}
+
+		m_recvBytes += size;
+
 		m_recvCS.Unlock();
 
 	}
@@ -124,6 +140,7 @@ namespace zedu {
 		m_pSendQueue->Read( NULL, size );
 		m_bSendPending = false;
 		m_sendingBytes -= size;
+		m_sendBytes += size;
 
 		int restSize = m_pSendQueue->Size();
 
@@ -138,8 +155,28 @@ namespace zedu {
 			}
 		}
 
+		// WaitQueue 처리
+		if( m_pWaitQueue->Size() > 0 )
+		{
+			int sz = m_pSendQueue->FreeSize();
+			int nSize = std::min<int>( m_pWaitQueue->Size(), sz );
+			if( nSize > 0 )
+			{
+				m_pSendQueue->Write( m_pWaitQueue->GetBuf(), nSize );
+				m_pWaitQueue->Read( NULL, nSize );
+
+				if( !bSendReq )
+				{
+					ProcWriteFile();
+					bSendReq = true;
+				}
+			}
+		}
+
 		if( m_bAsyncCloseSignal && !bSendReq )
+		{
 			Close();
+		}
 	}
 
 	void IOCPConnection::OnConnect( void* pBuf )
@@ -162,6 +199,7 @@ namespace zedu {
 	
 	void IOCPConnection::OnDisconnect( int flag )
 	{
+		m_disconnectReason = flag;
 		bool bNotifyClosed = false;
 
 		{
@@ -172,10 +210,15 @@ namespace zedu {
 			{
 				if( IsConnected() )
 					m_bConnected = false;
+
+				bNotifyClosed = true;
 			}
 		}
 
-		PostQueuedCompletionStatus( m_hIOCP, 0, IOCP::EVENT_CONNECTION_CLOSED, m_pRecvOverlapped );
+		if( bNotifyClosed )
+		{
+			PostQueuedCompletionStatus( m_hIOCP, 0, IOCP::EVENT_CONNECTION_CLOSED, m_pRecvOverlapped );
+		}
 	}
 
 	bool IOCPConnection::PendRecvRequest()
@@ -199,6 +242,9 @@ namespace zedu {
 
 		m_recvWSABUF.buf = const_cast<char*>( m_pRecvQueue->GetBuf() + m_pRecvQueue->Size() );
 		m_recvWSABUF.len = m_pRecvQueue->FreeSize();
+
+		assert( GetPendingRecvCount() < 1 );
+		InterlockedIncrement( &m_pendingRecvQueryCount );
 
 		m_dwRecvFlag = 0;
 		int nRtn = WSARecv( GetSocketHandle(), &m_recvWSABUF, 1, &m_pRecvOverlapped->dwSize, &m_dwRecvFlag, m_pRecvOverlapped, NULL );
@@ -240,11 +286,10 @@ namespace zedu {
 		m_sendWSABUF.len = sendSize;
 
 		int nRtn = ::WSASend( GetSocketHandle(), &m_sendWSABUF, 1, &pSendOverlapped->dwSize, m_dwSendFlag, pSendOverlapped, NULL );
-
 		if( nRtn == SOCKET_ERROR )
 		{
 			DWORD nErr = ::WSAGetLastError();
-			if( nErr != WSA_IO_PENDING )
+			if( nErr == WSA_IO_PENDING )
 			{
 			}
 			else
@@ -291,6 +336,17 @@ namespace zedu {
 		if( m_pSendQueue->FreeSize() < len )
 		{
 			// TOOD+ 큐가 넘치면 무시한다(WaitQueue 처리 해야함)
+			sendLen = m_pSendQueue->FreeSize();
+			m_pSendQueue->Write( pBuf, sendLen );
+
+			uint32 waitPrevSize = m_pWaitQueue->Size();
+			if( waitPrevSize + (len - sendLen) > MAXDWORD )
+			{
+				AsyncClose();
+				return -1;
+			}
+
+			m_pWaitQueue->Write( (char*)pBuf+sendLen, len-sendLen );
 		}
 		else
 		{
@@ -309,13 +365,46 @@ namespace zedu {
 		return len;
 	}
 
-	void IOCPConnection::PeekSendBuf(void* pBuf, uint32 size)
+	int IOCPConnection::Peek( void* pBuf, size_t len )
 	{
-		m_pSendQueue->Peek(pBuf, size);
+		THREAD_SYNC( m_recvCS );
+		
+		int readBytes = std::min<size_t>( len, m_pRecvQueue->Size() );
+		memcpy( pBuf, m_pRecvQueue->GetBuf(), readBytes );
+		return readBytes;
+	}
+
+	int IOCPConnection::Size()
+	{
+		return m_pRecvQueue->Size();
+	}
+
+	byte* IOCPConnection::GetBuf()
+	{
+		return m_pRecvQueue->GetBuf();
+	}
+
+	bool IOCPConnection::Reserve( int size )
+	{
+		if( m_pRecvQueue->GetReservedSize() < size  )
+		{
+			return m_pRecvQueue->Reserve( size );
+		}
+		return false;
 	}
 
 	long IOCPConnection::GetPendingQueryCount()
 	{
 		return m_pendingRecvQueryCount + m_pendingSendQueryCount;
+	}
+
+	long IOCPConnection::GetPendingRecvCount()
+	{
+		return m_pendingRecvQueryCount;
+	}
+
+	long IOCPConnection::GetPendingSendCount()
+	{
+		return m_pendingSendQueryCount;
 	}
 }

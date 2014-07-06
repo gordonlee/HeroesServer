@@ -66,14 +66,11 @@
     <ClCompile Include="..\Include\Network\queue.cpp">
       <Filter>Include\Network</Filter>
     </ClCompile>
+    <ClCompile Include="..\Include\Core\logger.cpp">
+      <Filter>Include\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="message_base.h">
-      <Filter>Game</Filter>
-    </ClInclude>
-    <ClInclude Include="mmo_server_message.h">
-      <Filter>Game</Filter>
-    </ClInclude>
     <ClInclude Include="..\Include\Network\acceptor.h">
       <Filter>Include\Network</Filter>
     </ClInclude>
@@ -133,6 +130,15 @@
     </ClInclude>
     <ClInclude Include="..\Include\Network\network_event.h">
       <Filter>Include\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Game\game_env.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Game\game_message.h">
+      <Filter>Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Include\Core\logger.h">
+      <Filter>Include\Core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

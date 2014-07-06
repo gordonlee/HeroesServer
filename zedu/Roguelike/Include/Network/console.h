@@ -204,5 +204,92 @@ namespace zedu {
 		}
 	};
 
-	#define cprint	Console::DefaultConsole().Printf
+	struct Canvas_W32
+	{
+		int m_canvasWidth, m_canvasHeight;
+		HFONT oldFont;
+		HFONT m_font;
+		HDC m_canvasDC;
+		HBITMAP m_canvasBitmap;
+		HBRUSH m_canvasBrush;
+		HGDIOBJ oldObject;
+		
+		Canvas_W32( HDC hdc, int w, int h, int fontHeight, COLORREF clrText=RGB(255,255,255), COLORREF clrBrush=RGB(0,0,0) )
+		{
+			m_canvasWidth = w;
+			m_canvasHeight = h;
+
+			m_canvasDC = CreateCompatibleDC( hdc );
+			m_canvasBitmap = CreateCompatibleBitmap( hdc, 1600, 1200 );
+			oldObject = SelectObject( m_canvasDC, m_canvasBitmap );
+
+			m_font = zedu::CreateFont( "굴림체", fontHeight/2, fontHeight );
+			oldFont = SelectFont( m_canvasDC, m_font );
+			m_canvasBrush = CreateSolidBrush( clrBrush );
+			SetTextColor( m_canvasDC, clrText );
+			SetBkMode( m_canvasDC, TRANSPARENT );
+		}
+		~Canvas_W32()
+		{
+			SelectObject( m_canvasDC, oldObject );
+			SelectFont( m_canvasDC, oldFont );
+			DeleteDC( m_canvasDC );
+			DeleteObject( m_canvasBitmap );
+			DeleteObject( m_canvasBrush );
+			DeleteObject( m_font );
+		}
+
+		void Clear()
+		{
+			RECT scRect;
+			scRect.bottom = m_canvasWidth;
+			scRect.top = 0;
+			scRect.left = 0;
+			scRect.right = m_canvasHeight;
+
+			FillRect( m_canvasDC, &scRect, m_canvasBrush );
+		}
+
+		void Paint(Console* pConsole, HDC hdc, const RECT *pRect)
+		{
+			const RECT &rect = *pRect;
+
+			Clear();
+
+			int tall = rect.bottom;
+			bool bAnchorBottom = false;
+
+			// 화면 크기가 콘솔 내용을 표시하기 충분한가?
+			if( pConsole->GetCount() * pConsole->GetLineHeight() > tall )
+			{
+				bAnchorBottom = true;
+			}
+
+			if( bAnchorBottom )
+			{
+				// 화면 하단정렬
+				for(int i = pConsole->GetCount()-1, j=1; i >= 0; i--, j++)
+				{
+					const char* str = pConsole->GetScreenLine(i);
+					int cy = tall - j*(pConsole->GetLineHeight());
+
+					TextOut( m_canvasDC, 5, cy, str, strlen(str) );
+				}
+			}
+			else
+			{
+				// 화면 상단정렬
+				for(int i = 0; i < pConsole->GetCount()+1; i++)
+				{
+					const char* str = pConsole->GetScreenLine(i);
+
+					TextOut( m_canvasDC, 5, i*(pConsole->GetLineHeight()), str, strlen(str) );
+				}
+			}
+
+			BitBlt( hdc, 0, 0, m_canvasWidth, m_canvasHeight, m_canvasDC, 0, 0, SRCCOPY );
+		}
+	};
+
+	//#define cprint	Console::DefaultConsole().Printf
 };

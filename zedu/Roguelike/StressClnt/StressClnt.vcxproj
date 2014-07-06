@@ -10,10 +10,56 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Game\game_env.cpp" />
+    <ClCompile Include="..\Include\Core\exception.cpp" />
+    <ClCompile Include="..\Include\Core\exception_handler.cpp" />
+    <ClCompile Include="..\Include\Core\logger.cpp" />
+    <ClCompile Include="..\Include\Network\acceptor.cpp" />
+    <ClCompile Include="..\Include\Network\connection.cpp" />
+    <ClCompile Include="..\Include\Network\console.cpp" />
+    <ClCompile Include="..\Include\Network\iocp.cpp" />
+    <ClCompile Include="..\Include\Network\net_util.cpp" />
+    <ClCompile Include="..\Include\Network\queue.cpp" />
+    <ClCompile Include="..\Include\Network\socket.cpp" />
+    <ClCompile Include="..\Include\Network\syncstream_connection.cpp" />
+    <ClCompile Include="..\Include\Thread\lock.cpp" />
+    <ClCompile Include="..\Include\Thread\thread.cpp" />
+    <ClCompile Include="..\Include\Util\string_util.cpp" />
+    <ClCompile Include="..\Include\Util\timer.cpp" />
+    <ClCompile Include="..\Include\Util\w32_util.cpp" />
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Game\game_env.h" />
+    <ClInclude Include="..\Game\game_message.h" />
+    <ClInclude Include="..\Include\Core\exception.h" />
+    <ClInclude Include="..\Include\Core\exception_handler.h" />
+    <ClInclude Include="..\Include\Core\types.h" />
+    <ClInclude Include="..\Include\Network\acceptor.h" />
+    <ClInclude Include="..\Include\Network\addr.h" />
+    <ClInclude Include="..\Include\Network\connection.h" />
+    <ClInclude Include="..\Include\Network\console.h" />
+    <ClInclude Include="..\Include\Network\iocp.h" />
+    <ClInclude Include="..\Include\Network\iocp_struct.h" />
+    <ClInclude Include="..\Include\Network\network_event.h" />
+    <ClInclude Include="..\Include\Network\net_const.h" />
+    <ClInclude Include="..\Include\Network\net_util.h" />
+    <ClInclude Include="..\Include\Network\queue.h" />
+    <ClInclude Include="..\Include\Network\socket.h" />
+    <ClInclude Include="..\Include\Network\socket_object.h" />
+    <ClInclude Include="..\Include\Network\syncstream_connection.h" />
+    <ClInclude Include="..\Include\Thread\lock.h" />
+    <ClInclude Include="..\Include\Thread\thread.h" />
+    <ClInclude Include="..\Include\Util\gdi_helper.h" />
+    <ClInclude Include="..\Include\Util\string_util.h" />
+    <ClInclude Include="..\Include\Util\timer.h" />
+    <ClInclude Include="..\Include\Util\w32_util.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{9E6B0F52-F683-4C28-8CF2-28AD63BFE730}</ProjectGuid>
+    <ProjectGuid>{4FC94A2C-B1BF-4E87-BDC0-0D8DF4BA77AA}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>RoguelikeClnt</RootNamespace>
+    <RootNamespace>StressClnt</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -77,52 +123,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\Game\game_env.cpp" />
-    <ClCompile Include="..\Include\Core\exception.cpp" />
-    <ClCompile Include="..\Include\Core\exception_handler.cpp" />
-    <ClCompile Include="..\Include\Core\logger.cpp" />
-    <ClCompile Include="..\Include\Network\acceptor.cpp" />
-    <ClCompile Include="..\Include\Network\connection.cpp" />
-    <ClCompile Include="..\Include\Network\console.cpp" />
-    <ClCompile Include="..\Include\Network\iocp.cpp" />
-    <ClCompile Include="..\Include\Network\net_util.cpp" />
-    <ClCompile Include="..\Include\Network\queue.cpp" />
-    <ClCompile Include="..\Include\Network\socket.cpp" />
-    <ClCompile Include="..\Include\Network\syncstream_connection.cpp" />
-    <ClCompile Include="..\Include\Thread\lock.cpp" />
-    <ClCompile Include="..\Include\Thread\thread.cpp" />
-    <ClCompile Include="..\Include\Util\string_util.cpp" />
-    <ClCompile Include="..\Include\Util\timer.cpp" />
-    <ClCompile Include="..\Include\Util\w32_util.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\Game\game_env.h" />
-    <ClInclude Include="..\Game\game_message.h" />
-    <ClInclude Include="..\Include\Core\exception.h" />
-    <ClInclude Include="..\Include\Core\exception_handler.h" />
-    <ClInclude Include="..\Include\Core\types.h" />
-    <ClInclude Include="..\Include\Network\acceptor.h" />
-    <ClInclude Include="..\Include\Network\addr.h" />
-    <ClInclude Include="..\Include\Network\connection.h" />
-    <ClInclude Include="..\Include\Network\console.h" />
-    <ClInclude Include="..\Include\Network\iocp.h" />
-    <ClInclude Include="..\Include\Network\iocp_struct.h" />
-    <ClInclude Include="..\Include\Network\network_event.h" />
-    <ClInclude Include="..\Include\Network\net_const.h" />
-    <ClInclude Include="..\Include\Network\net_util.h" />
-    <ClInclude Include="..\Include\Network\queue.h" />
-    <ClInclude Include="..\Include\Network\socket.h" />
-    <ClInclude Include="..\Include\Network\socket_object.h" />
-    <ClInclude Include="..\Include\Network\syncstream_connection.h" />
-    <ClInclude Include="..\Include\Thread\lock.h" />
-    <ClInclude Include="..\Include\Thread\thread.h" />
-    <ClInclude Include="..\Include\Util\gdi_helper.h" />
-    <ClInclude Include="..\Include\Util\string_util.h" />
-    <ClInclude Include="..\Include\Util\timer.h" />
-    <ClInclude Include="..\Include\Util\w32_util.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

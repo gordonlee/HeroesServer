@@ -49,10 +49,8 @@ namespace zedu {
 		HANDLE hIOCP;
 		std::vector<uint32> threadIDs;
 		std::vector<uintptr_t> threadHandles;
-
 		OverlappedAllocator* pOverlappedAllocator;
 		INetworkEventReceiver* pReceiver;
-
 		IOCP* pIOCP;
 		bool bFinished;
 
@@ -131,7 +129,7 @@ namespace zedu {
 
 			// EventReceiver 호출
 			if( pTag->pReceiver )
-				pTag->pReceiver->OnRead( threadNum, pConnection );
+				pTag->pReceiver->OnRead( threadNum, pConnection, size );
 
 			// 정상적인 Recv 였다면..
 			if( size > 0 && pConnection->IsConnected() )
@@ -170,6 +168,9 @@ namespace zedu {
 	{
 		IOCPTag* pTag = static_cast<IOCPTag*>( pArg );
 
+		InterlockedIncrement( &pTag->pIOCP->m_currentThreadCount );
+		InterlockedIncrement( &pTag->pIOCP->m_workingThreadCount );
+
 		uint32 threadNum = 0;
 		for( threadNum=0; 
 			threadNum < pTag->threadIDs.size() && GetCurrentThreadId() != pTag->threadIDs[threadNum];
@@ -188,11 +189,17 @@ namespace zedu {
 		{
 			try
 			{
+				// WorkingThreadCount 조정(대기모드이므로 1감소)
+				InterlockedDecrement( &pTag->pIOCP->m_workingThreadCount );
+
 				rtn = GetQueuedCompletionStatus( pTag->hIOCP, 
 												&dwNumberOfBytes,
 												&dwCompletionKey,
 												(OVERLAPPED**)&pOverlapped,
 												INFINITE );
+
+				// WorkingThreadCount 조정(처리모드이므로 1증가)
+				InterlockedIncrement( &pTag->pIOCP->m_workingThreadCount );
 
 				// 스레드 종료 시그널이 도착했다면 중지
 				if( dwCompletionKey == IOCP::EVENT_STOP || pTag->bFinished )
@@ -221,20 +228,42 @@ namespace zedu {
 					int errorCode = ::WSAGetLastError();
 					//pOverlapped->pObj->SetLastError( errorCode );
 
-					// TODO+ 에러처리..
-					// continue;
-					
-					if( pOverlapped->typeIO == OverlappedIO::IO_ACCEPT )
+					if( errorCode == WSAECONNREFUSED )
 					{
-						// TODO+ onAcceptEvent()
-					}
-					else if( pOverlapped->typeIO == OverlappedIO::IO_RECV || pOverlapped->typeIO == OverlappedIO::IO_SEND )
-					{
-						// TODO+ onConnectionEvent
+						continue;
 					}
 
-					// 기타에러임
-					continue;
+					// 디스커넥트
+					if(	errorCode == WSAENETDOWN ||
+						errorCode == WSAENETUNREACH ||
+						errorCode == WSAENETRESET ||
+						errorCode == WSAECONNABORTED ||
+						errorCode == WSAECONNRESET ||
+						errorCode == WSAETIMEDOUT ||
+						errorCode == WSAEHOSTDOWN ||
+						errorCode == WSAEHOSTUNREACH ||
+						errorCode == WSAEDISCON ||
+						errorCode == WSA_OPERATION_ABORTED ||
+
+						errorCode == ERROR_SEM_TIMEOUT ||
+						errorCode == ERROR_NETNAME_DELETED ||
+						errorCode == ERROR_CONNECTION_ABORTED ||
+						errorCode == ERROR_OPERATION_ABORTED ||
+
+						errorCode == ERROR_HOST_UNREACHABLE ) // 가끔 발생한다나?
+					{
+						if( pOverlapped->typeIO == OverlappedIO::IO_ACCEPT )
+						{
+							OnAcceptEvent( pTag, threadNum, pOverlapped, false );
+						}
+						else if( pOverlapped->typeIO == OverlappedIO::IO_RECV || pOverlapped->typeIO == OverlappedIO::IO_SEND )
+						{
+							OnConnectionEvent( pTag, threadNum, pOverlapped, -1 );
+						}
+
+						// 기타에러임
+						continue;
+					}
 				}
 
 				if(pOverlapped->pObj->GetTypeID() == IOCPAcceptor::TypeID)
@@ -256,14 +285,21 @@ namespace zedu {
 			}
 		}
 
+		// ThreadCount 조정
+		InterlockedDecrement( &pTag->pIOCP->m_currentThreadCount );
+		InterlockedDecrement( &pTag->pIOCP->m_workingThreadCount );
+
 		return 0;
 	}
 	
 	IOCP::IOCP( INetworkEventReceiver* pReceiver )
 	{
-		m_threadCount = 0;
 		m_pTag = new IOCPTag( pReceiver );
 		m_pTag->pIOCP = this;
+
+		m_threadCount = 0;
+		m_currentThreadCount = 0;
+		m_workingThreadCount = 0;
 	}
 	
 	IOCP::~IOCP()
@@ -274,9 +310,13 @@ namespace zedu {
 	bool IOCP::Create()
 	{
 		m_pTag->hIOCP = CreateIoCompletionPort( INVALID_HANDLE_VALUE, NULL, 0, 0 );
+		
 		if( m_pTag->hIOCP )
 		{
 			m_threadCount = 0;
+			m_currentThreadCount = 0;
+			m_workingThreadCount = 0;
+
 			return true;
 		}
 		return false;
@@ -307,8 +347,6 @@ namespace zedu {
 		HANDLE hFileHandle = INVALID_HANDLE_VALUE;
 		IOCPAcceptor* pAcceptor = NULL;
 		IOCPConnection* pConnection = NULL;
-
-		
 
 		// 객체 얻어옴
 		if(pObj->GetTypeID() == IOCPAcceptor::TypeID )
@@ -372,11 +410,45 @@ namespace zedu {
 		{
 			::ResumeThread( (HANDLE)m_pTag->threadHandles[i] );
 		}
+
+		m_threadCount = threadNum;
 		return true;
 	}
 	
 	bool IOCP::EndThreadPool()
 	{
+		if( !m_pTag->hIOCP )
+			return false;
+		
+		int errorCount = 0;
+		std::vector<uintptr_t>::iterator it;
+		std::vector<uintptr_t>& threadHandles = m_pTag->threadHandles;
+
+		// 모든 스레드에게 종료시그널(IOCP::EVENT_STOP)을 전송한다
+		for(it = threadHandles.begin(); it != threadHandles.end(); it++)
+		{
+			if( !PostQueuedCompletionStatus(m_pTag->hIOCP, 0, IOCP::EVENT_STOP, NULL ) )
+			{
+				++errorCount ;
+			}
+		}
+
+		if( errorCount > 0 )
+			return false;
+
+		// 모든 스레드가 마칠떄까지 대기한다
+		while( m_currentThreadCount > 0 )
+		{
+			Sleep( 100 );
+		}
+
+		
+		for(it = threadHandles.begin(); it != threadHandles.end(); it++)
+		{
+			CloseHandle( (HANDLE)*it );
+		}
+
+		threadHandles.clear();
 		return true;
 	}
 

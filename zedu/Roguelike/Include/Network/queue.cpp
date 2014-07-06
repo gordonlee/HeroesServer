@@ -90,6 +90,15 @@ namespace zedu {
 		{
 			byte* pNewData = static_cast<byte*>( m_pAllocator->Realloc( m_pData, m_length + size ) );
 
+			if( pNewData )
+			{
+				m_pData = pNewData;
+			}
+			else
+			{
+				m_pData = pNewData;
+			}
+
 			m_length += size;
 
 			return true;
@@ -100,7 +109,11 @@ namespace zedu {
 			return m_length - m_size;
 		}
 
-		virtual bool Reserve( uint32 size )	{ return IncreaseBuffer( size ); }
+		virtual bool Reserve( uint32 size )	
+		{ 
+			uint32 increaseSize = size - FreeSize();
+			return IncreaseBuffer( increaseSize ); 
+		}
 
 		virtual bool Resize( uint32 size )
 		{ 

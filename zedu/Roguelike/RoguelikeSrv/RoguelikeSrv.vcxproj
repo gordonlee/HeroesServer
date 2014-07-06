@@ -53,6 +53,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -80,6 +81,7 @@
   <ItemGroup>
     <ClCompile Include="..\Include\Core\exception.cpp" />
     <ClCompile Include="..\Include\Core\exception_handler.cpp" />
+    <ClCompile Include="..\Include\Core\logger.cpp" />
     <ClCompile Include="..\Include\Network\acceptor.cpp" />
     <ClCompile Include="..\Include\Network\connection.cpp" />
     <ClCompile Include="..\Include\Network\console.cpp" />
@@ -94,8 +96,11 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Game\game_env.h" />
+    <ClInclude Include="..\Game\game_message.h" />
     <ClInclude Include="..\Include\Core\exception.h" />
     <ClInclude Include="..\Include\Core\exception_handler.h" />
+    <ClInclude Include="..\Include\Core\logger.h" />
     <ClInclude Include="..\Include\Core\types.h" />
     <ClInclude Include="..\Include\Network\acceptor.h" />
     <ClInclude Include="..\Include\Network\addr.h" />
@@ -114,8 +119,6 @@
     <ClInclude Include="..\Include\Util\gdi_helper.h" />
     <ClInclude Include="..\Include\Util\string_util.h" />
     <ClInclude Include="..\Include\Util\w32_util.h" />
-    <ClInclude Include="message_base.h" />
-    <ClInclude Include="mmo_server_message.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

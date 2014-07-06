@@ -30,18 +30,31 @@ namespace zedu {
 		Addr m_peerAddr;
 
 	public:
+		ISocketConnection( bool bOverlapped )
+		{
+			m_bConnected = false;
+			m_socket.CreateStreamSocket( bOverlapped );
+		}
+
 		ISocketConnection( const Socket& sock )
 		{
 			m_bConnected = false;
 			m_socket = sock;
 		}
 
+		bool IsConnected() { return m_bConnected; }
+
 		virtual void GetMyAddress( Addr& addr )			{ addr = m_myAddr; }
 		virtual void GetPeerAddress( Addr& addr )		{ addr = m_peerAddr; }
 		virtual const Addr& GetMyAddress()				{ return m_myAddr; }
 		virtual const Addr& GetPeerAddress()			{ return m_peerAddr; }
 
-		bool IsConnected() { return m_bConnected; }
+		virtual bool Connect( const Addr& addr ) = 0;
+		virtual bool Close() = 0;
+
+		virtual int Read( void* pBuf, size_t len ) = 0;
+		virtual int Write( const void* pBuf, size_t len ) = 0;
+		virtual int Peek( void* pBuf, size_t len ) = 0;
 	};
 
 	class IQueue;
@@ -64,6 +77,7 @@ namespace zedu {
 
 		IQueue* m_pRecvQueue;
 		IQueue* m_pSendQueue;
+		IQueue* m_pWaitQueue;
 
 		OverlappedIO* m_pRecvOverlapped;
 		OverlappedIO* m_pSendOverlapped;
@@ -76,12 +90,22 @@ namespace zedu {
 
 		volatile bool m_bAsyncCloseSignal;
 
+		int m_recvBytes;
+		int m_sendBytes;
+		int m_disconnectReason;
+
 	public:
 		IOCPConnection( OverlappedAllocator* pAllocator, const Socket& sock );
 		virtual ~IOCPConnection();
 
-		virtual int	 Read( void* pBuf, size_t len );
-		virtual int	 Write( const void* pBuf, size_t len );
+		virtual bool Connect( const Addr& addr );
+
+		virtual int Read( void* pBuf, size_t len );
+		virtual int Write( const void* pBuf, size_t len );
+		virtual int Peek( void* pBuf, size_t len );
+		virtual int Size();
+		byte* GetBuf();
+		bool Reserve( int size );
 
 		static int TypeID;
 		virtual int GetTypeID() const { return TypeID; }
@@ -90,9 +114,16 @@ namespace zedu {
 		void AsyncClose(); // 전송중인 버퍼를 모두 전송후 접속죵료
 
 		long GetPendingQueryCount();
+		long GetPendingRecvCount();
+		long GetPendingSendCount();
 
-		// TEMP+
-		void PeekSendBuf(void* pBuf, uint32 size);
+		int GetTotalRecvBytes() const { return m_recvBytes; }
+		int GetTotalSendBytes() const { return m_sendBytes; }
+		void SetSocket( const Socket& sock )
+		{
+			m_socket = sock;
+		}
+		int GetDisconnectReason() const { return m_disconnectReason; }
 
 	private:
 		void Init( OverlappedAllocator* pAllocator );

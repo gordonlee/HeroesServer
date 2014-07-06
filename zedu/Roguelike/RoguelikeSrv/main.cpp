@@ -1,15 +1,21 @@
 #include <winsock2.h>
+#include "Core/logger.h"
 #include "Core/types.h"
+#include "Game/game_env.h"
+#include "Game/game_message.h"
+#include <list>
 #include "Network/acceptor.h"
 #include "Network/console.h"
 #include "Network/connection.h"
 #include "Network/iocp.h"
 #include "Util/gdi_helper.h"
 #include "Util/string_util.h"
+#include <vector>
 #include <Windows.h>
 #include <windowsx.h>
 
 using namespace zedu;
+using namespace std;
 
 HWND hWnd;
 HWND hEdit;
@@ -20,6 +26,11 @@ TCHAR szWindowClass[] = "RoguelikeSrv";
 const int INPUT_BOX_HEIGHT = 20; // 하단의 입력창 세로 크기
 const int CONSOLE_FONT_HEIGHT = 14;	// 콘솔 폰트 세로 크기
 const char* CONSOLE_FONT = "Lucida Console";
+
+int g_gameServerViewMode = 0; // 0:main, 1:status
+std::list<IOCPConnection*> g_connList;
+
+CriticalSection g_logCS;
 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -65,58 +76,129 @@ Console& GetMainConsole()
 	return Console::DefaultConsole();
 }
 
+void SendPacket( ISocketConnection* pConnection, MSG_Value* pMsg )
+{
+	IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
+	const char* peerAddr = pConn->GetPeerAddress().GetAddr();
+	SOCKET sock = pConn->GetSocketHandle();
+	int packetSize = pMsg->size+sizeof(MSG_Value);
+	
+	cprint( "[%s](%d) send packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
+			peerAddr, sock, packetSize, pMsg->size, pMsg->flag, pMsg->checksum );
+
+	pConn->Write( pMsg, packetSize );
+}
+
+
+
 // 이벤트 핸들러
 struct MyEventReceiver : public INetworkEventReceiver
 {
 	virtual IConnection* CreateConnection(const Socket& sock )
 	{
-		return new IOCPConnection( NULL, sock );
+		IOCPConnection* pConn = NULL;
+		for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
+		{
+			if( (*it)->IsConnected() )
+				continue;
+			
+			pConn = (*it);
+			break;
+		}
+		
+		if( pConn == NULL )
+		{
+			pConn = new IOCPConnection( NULL, sock );
+			g_connList.push_back( pConn );
+		}
+		else
+		{
+			//pConn->Init( NULL );
+			pConn->SetSocket( sock );
+		}
+		return pConn;
+	}
+
+	virtual void OnDisconnect( int threadId, IConnection* pConnection )
+	{
+		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
+		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
+		SOCKET sock = pConn->GetSocketHandle();
+
+		cprint( "[%s](%d) connection closed(%d) \n", peerAddr, sock, pConn->GetDisconnectReason() );
+		InvalidateRect( hWnd, NULL, false );
+		
+		//g_connList.remove( pConn );
+		//delete pConnection;
 	}
 
 	virtual bool OnAccept( int threadId, IAcceptor* pAcceptor, IConnection* pConnection )
 	{
-		GetMainConsole().Printf( "Connection accepted from [%s]\n", pConnection->GetPeerAddress().GetAddr());
+		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
+		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
+		SOCKET sock = pConn->GetSocketHandle();
+
+		cprint( "[%s](%d) connection accepted() \n", peerAddr, sock );
 		InvalidateRect( hWnd, NULL, false );
 		return true;
 	}
 
-	virtual void OnRead( int threadId, IConnection* pConnection )
+	virtual void OnRead( int threadId, IConnection* pConnection, uint32 size )
 	{
 		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
+		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
+		SOCKET sock = pConn->GetSocketHandle();
+		cprint( "[%s](%d) >> recv %d bytes \n", peerAddr, sock, size );
 
-		zedu::byte buf[2048];
-		int receivedBytes = pConn->Read( buf, 2048 );
-		buf[receivedBytes] = '\0';
+		MSG_Value msg;
+		int readBytes = pConn->Peek( &msg, sizeof(MSG_Value) );
+		if( readBytes < sizeof(MSG_Value) )
+			return;
 
-		std::string strRecv = buf;
-		zedu::Replace( strRecv, "\n", "" );
+		int packetSize = sizeof(MSG_Value)+msg.size;
+		if( pConn->Reserve( packetSize ) )
+		{
+			cprint( "[%s](%d) reserve %d bytes \n", peerAddr, sock, packetSize );
+		}
 
-		GetMainConsole().Printf( "[%s] >> %s \n", pConnection->GetPeerAddress().GetAddr(), strRecv.c_str() );
-		pConn->Write( buf, receivedBytes );
+		if( pConn->Size() < msg.size )
+			return;
+
+		zedu::byte* pBuf = pConn->GetBuf();
+		MSG_Value* pMsg = reinterpret_cast<MSG_Value*>( pBuf );
+		zedu::byte* pData = reinterpret_cast<zedu::byte*>(pMsg+1);
+		
+
+		std::string str("..");
+		if( pMsg->size <= 64 )
+		{
+			str = pData;
+			zedu::Replace( str, "\n", "" );
+		}
+
+		if( pMsg->size != 65532 || pMsg->flag != 1 || pMsg->checksum != 0x55 )
+		{
+			int nil = 0;
+		}
+		
+		cprint( "[%s](%d) recv packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
+			peerAddr, sock, pConn->Size(), pMsg->size, pMsg->flag, pMsg->checksum );
+
+		SendPacket( pConn, pMsg );
+
+		pConn->Read( NULL, pConn->Size() );
+
 		InvalidateRect( hWnd, NULL, false );
 	}
 
 	virtual void OnWrite( int threadId, IConnection* pConnection, uint32 size )
 	{
 		IOCPConnection* pConn = static_cast<IOCPConnection*>( pConnection );
+		const char* peerAddr = pConnection->GetPeerAddress().GetAddr();
+		SOCKET sock = pConn->GetSocketHandle();
+		cprint( "[%s](%d) << send %d bytes \n", peerAddr, sock, size );
 
-		char buf[1024];
-		pConn->PeekSendBuf((void*)buf, size);
-		buf[size] = '\0';
-
-		std::string strSend = buf;
-		zedu::Replace( strSend, "\n", "" );
-
-		GetMainConsole().Printf( "[%s] << %s \n", pConnection->GetPeerAddress().GetAddr(), strSend.c_str() );
 		InvalidateRect( hWnd, NULL, false );
-	}
-
-	virtual void OnDisconnect( int threadId, IConnection* pConnection )
-	{
-		GetMainConsole().Printf( "Connection disconnected [%s]\n", pConnection->GetPeerAddress().GetAddr());
-		InvalidateRect( hWnd, NULL, false );
-
-		delete pConnection;
 	}
 
 } g_eventReceiver;
@@ -125,8 +207,18 @@ struct MyEventReceiver : public INetworkEventReceiver
 IOCP			g_iocp( &g_eventReceiver );
 IOCPAcceptor*	g_pAcceptor;
 
+
+void output( const char* str )
+{
+	THREAD_SYNC( g_logCS );
+	
+	Console::DefaultConsole().PrintStr( str );
+	OutputDebugStringA( str );
+}
+
 void StartServer()
 {
+	Logger::SetOutputHandler( output );
 	cprint("Starting server ... \n");
 
 	WSADATA wsa;
@@ -138,17 +230,30 @@ void StartServer()
 	g_pAcceptor = new IOCPAcceptor( 100 );
 	cprint( "Initializing IOCP ... ", g_iocp.Create() ? "ok" : "FAILED" );
 
-	g_iocp.StartThreadPool( 1 );
-	
-	g_pAcceptor->StartAccept( 9999 );
+	g_iocp.StartThreadPool( GAME_SERVER_THREAD_NUMBER );
+
+	g_pAcceptor->StartAccept( GAME_SERVER_PORT );
 	g_iocp.AddObject( g_pAcceptor );
 
 	cprint("ok\n");
+
+	cprint("\n");
+	cprint( "F1 : main screen \n" );
+	cprint( "F2 : status screen \n" );
 }
 
 void ShutdownServer()
 {
 	cprint("Shutdown ... \n");
+
+	for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
+	{
+		(*it)->Close();
+	}
+	g_connList.clear();
+
+	g_iocp.EndThreadPool();
+	g_pAcceptor->EndAccept();
 
 	PostMessage( hWnd, WM_CLOSE, 0, 0 );
 	cprint("ok\n");
@@ -156,15 +261,15 @@ void ShutdownServer()
 
 void ProcCommand( const char* buf )
 {
-	GetMainConsole().Printf( buf );
+	cprint( buf );
 
 	std::vector<std::string> tokens;
 	Split( buf, tokens, " \n", true );
 
 	if( !tokens.empty() )
 	{
-		if( tokens[0] == "exit" )			ShutdownServer();
-		else if( tokens[0] == "clear" )		GetMainConsole().Clear();
+		if( tokens[0] == "!exit" )			{ ShutdownServer(); }
+		else if( tokens[0] == "!clear" )	{ GetMainConsole().Clear(); }
 	}
 }
 
@@ -213,100 +318,37 @@ int APIENTRY WinMain(HINSTANCE hInstance,
 
 void DrawConsole(HDC hDC, Console* pConsole)
 {
-	struct Canvas_W32
-	{
-		int m_canvasWidth, m_canvasHeight;
-		
-		HFONT oldFont;
-		HFONT m_font;
-		HDC m_canvasDC;
-		HBITMAP m_canvasBitmap;
-		HBRUSH m_canvasBrush;
-		HGDIOBJ oldObject;
-		
-		Canvas_W32( HDC hdc, int w, int h, int fontHeight )
-		{
-			m_canvasWidth = w;
-			m_canvasHeight = h;
-
-			m_canvasDC = CreateCompatibleDC( hdc );
-			m_canvasBitmap = CreateCompatibleBitmap( hdc, 1600, 1200 );
-			oldObject = SelectObject( m_canvasDC, m_canvasBitmap );
-
-			m_font = zedu::CreateFont( "굴림체", fontHeight/2, fontHeight );
-			oldFont = SelectFont( m_canvasDC, m_font );
-			m_canvasBrush = CreateSolidBrush( RGB(0,0,0) );
-			SetTextColor( m_canvasDC, RGB(255,255,255) );
-			SetBkMode( m_canvasDC, TRANSPARENT );
-		}
-		~Canvas_W32()
-		{
-			SelectObject( m_canvasDC, oldObject );
-			SelectFont( m_canvasDC, oldFont );
-			DeleteDC( m_canvasDC );
-			DeleteObject( m_canvasBitmap );
-			DeleteObject( m_canvasBrush );
-			DeleteObject( m_font );
-		}
-
-		void Clear()
-		{
-			RECT scRect;
-			scRect.bottom = m_canvasWidth;
-			scRect.top = 0;
-			scRect.left = 0;
-			scRect.right = m_canvasHeight;
-
-			FillRect( m_canvasDC, &scRect, m_canvasBrush );
-		}
-
-		void Paint(Console* pConsole, HDC hdc, const RECT *pRect)
-		{
-			const RECT &rect = *pRect;
-
-			Clear();
-
-			int tall = rect.bottom;
-			bool bAnchorBottom = false;
-
-			// 화면 크기가 콘솔 내용을 표시하기 충분한가?
-			if( pConsole->GetCount() * pConsole->GetLineHeight() > tall )
-			{
-				bAnchorBottom = true;
-			}
-
-			if( bAnchorBottom )
-			{
-				// 화면 하단정렬
-				for(int i = pConsole->GetCount()-1, j=1; i >= 0; i--, j++)
-				{
-					const char* str = pConsole->GetScreenLine(i);
-					int cy = tall - j*(pConsole->GetLineHeight());
-
-					TextOut( m_canvasDC, 5, cy, str, strlen(str) );
-				}
-			}
-			else
-			{
-				// 화면 상단정렬
-				for(int i = 0; i < pConsole->GetCount()+1; i++)
-				{
-					const char* str = pConsole->GetScreenLine(i);
-
-					TextOut( m_canvasDC, 5, i*(pConsole->GetLineHeight()), str, strlen(str) );
-				}
-			}
-
-			BitBlt( hdc, 0, 0, m_canvasWidth, m_canvasHeight, m_canvasDC, 0, 0, SRCCOPY );
-		}
-	};
-	static Canvas_W32 canvas( hDC, 1600, 1200, CONSOLE_FONT_HEIGHT );
+	static Canvas_W32 canvas( hDC, 1600, 1200, CONSOLE_FONT_HEIGHT, RGB(255,255,255), RGB(68,68,68) );
 	
 	RECT rc;
 	GetClientRect( hWnd, &rc );
 	rc.bottom -= (INPUT_BOX_HEIGHT + 2);
 
 	pConsole->Draw<Canvas_W32>( canvas, hDC, &rc );
+}
+
+void DrawStatus(HDC hDC)
+{
+	static Console statConsole;
+	statConsole.Clear();
+
+	statConsole.Printf( "Current thread count = %d\n", g_iocp.GetCurrentThreadCount() );
+	statConsole.Printf( "Working thread count = %d\n", g_iocp.GetWorkingThreadCount() );
+
+	statConsole.Printf( "\n" );
+	int i = 1;
+	for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
+	{
+		IOCPConnection* pConn = *it;
+		statConsole.Printf("%d. conn[%d]=%s, total recv/send bytes=(%d/%d), pending recv/send(%d/%d) \n", 
+			i++, pConn->GetSocketHandle(),
+			pConn->IsConnected() ? "connected" : "disconnected",
+			pConn->GetTotalRecvBytes(), pConn->GetTotalSendBytes(),
+			pConn->GetPendingRecvCount(), pConn->GetPendingSendCount()
+			);
+	}
+	
+	DrawConsole( hDC, &statConsole );
 }
 
 void onWmSize( int width, int height )
@@ -371,7 +413,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_PAINT:
 		hdc = BeginPaint( hWnd, &ps );
-		DrawConsole( hdc, &GetMainConsole() );
+
+		if( g_gameServerViewMode == 0 )
+		{
+			DrawConsole( hdc, &GetMainConsole() );
+		}
+		else if( g_gameServerViewMode == 1 )
+		{
+			DrawStatus( hdc );
+		}
+		
 		EndPaint( hWnd, &ps );
 		break;
 
@@ -409,6 +460,8 @@ LRESULT CALLBACK KeyboardProc( int code, WPARAM wParam, LPARAM lParam )
 		case VK_NEXT:	pConsole->ScreenPageDown();								break;
 		case VK_UP :	if( bCtrl ) pConsole->ScreenUp(); break;
 		case VK_DOWN:	if( bCtrl ) pConsole->ScreenDown(); break;
+		case VK_F1:		g_gameServerViewMode = 0; break;
+		case VK_F2:		g_gameServerViewMode = 1; break;
 	}
 
 	bool bEraseFlag = false;
