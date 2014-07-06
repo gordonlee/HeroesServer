@@ -1,0 +1,13 @@
+#ifndef __DEF_DEFINE__
+#define __DEF_DEFINE__
+
+#define DEF_MAX_PACKETSIZE		65536
+
+#define DEF_HEADER_SIZE		4
+#define DEF_HEADER_CHECKSUM 0x55
+
+#define DEF_FLAG_ECHO		0x01
+#define DEF_FLAG_BROADCAST	0x02
+
+
+#endif
