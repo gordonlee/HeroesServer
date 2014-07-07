@@ -279,7 +279,7 @@ void SendPacket( ISocketConnection* pConn, zedu::byte* pBuf, int len )
 	new( pMsg ) MSG_Value();
 
 	pMsg->size = len;
-	pMsg->flag = 0x01;
+	pMsg->flag = 0x01/*(rand() % 2)+1*/;
 	pMsg->checksum = 0x55;
 
 	memcpy( pMsg+1, pBuf, len );

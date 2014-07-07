@@ -94,7 +94,24 @@ void SendPacket( ISocketConnection* pConnection, MSG_Value* pMsg )
 	pConn->Write( pMsg, packetSize );
 }
 
+void BroadcastPacket( IOCPConnection* pFrom, MSG_Value* pMsg )
+{
+	const char* peerAddr = pFrom->GetPeerAddress().GetAddr();
+	SOCKET sock = pFrom->GetSocketHandle();
+	int packetSize = pMsg->size+sizeof(MSG_Value);
 
+	cprint( "(%s)[%s](%d) broadcast packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
+		GetThreadName(), peerAddr, sock, packetSize, pMsg->size, pMsg->flag, pMsg->checksum );
+
+	for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
+	{
+		IOCPConnection* pConn = *it;
+		if( pConn && pConn->IsConnected() )
+		{
+			SendPacket( pConn, pMsg );
+		}
+	}
+}
 
 // 이벤트 핸들러
 struct MyEventReceiver : public INetworkEventReceiver
@@ -109,28 +126,6 @@ struct MyEventReceiver : public INetworkEventReceiver
 
 		g_connList.push_back( pConn );
 		return pConn;
-
-		//IOCPConnection* pConn = NULL;
-		//for( list<IOCPConnection*>::iterator it = g_connList.begin(); it != g_connList.end(); it++ )
-		//{
-		//	if( (*it)->IsConnected() )
-		//		continue;
-		//	
-		//	pConn = (*it);
-		//	break;
-		//}
-		//
-		//if( pConn == NULL )
-		//{
-		//	
-		//}
-		//else
-		//{
-		//	
-		//	pConn->SetSocket( sock );
-		//	pConn->Init( NULL );
-		//}
-		//return pConn;
 	}
 
 	virtual void OnDisconnect( int threadId, IConnection* pConnection )
@@ -201,7 +196,14 @@ struct MyEventReceiver : public INetworkEventReceiver
 		cprint( "(%s)[%s](#%d, %d) recv packet(%d bytes), header=[%d,%d,%d] data=[] \n", 
 			GetThreadName(), peerAddr, pConn->GetConnNumber(), sock, pConn->Size(), pMsg->size, pMsg->flag, pMsg->checksum );
 
-		SendPacket( pConn, pMsg );
+		if( pMsg->flag == 0x01 )
+		{
+			SendPacket( pConn, pMsg );
+		}
+		else if( pMsg->flag == 0x02 )
+		{
+			BroadcastPacket( pConn, pMsg );
+		}
 
 		pConn->Read( NULL, pConn->Size() );
 
@@ -278,7 +280,7 @@ void ShutdownServer()
 
 void UpdateServer()
 {
-	if( g_objectRemover.Count() > 256 )
+	if( g_objectRemover.Count() > 32 )
 	{
 		g_objectRemover.DelObject();
 	}

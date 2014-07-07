@@ -224,9 +224,10 @@ namespace zedu {
 						m_bConnected = false;
 						Close();
 					}
+
+					m_bDisconnectEventPosted = true;
+					bNotifyClosed = true;
 				}
-				m_bDisconnectEventPosted = true;
-				bNotifyClosed = true;
 			}
 		}
 
