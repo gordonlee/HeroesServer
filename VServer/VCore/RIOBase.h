@@ -25,25 +25,6 @@ namespace VCore
 		IO_RECV,
 	};
 
-	enum ErrorMessage
-	{
-		Success = -1,
-		Unknowm = 0,
-		WSAInitializeFail,
-		MakeListenSocketFail,
-		BindListenSocketFail,
-		AllocFunctionTableFail,
-		ListenSocketFail,
-	};
-
-	enum ListenSocketState
-	{
-		DISABLE = 0,
-		READY,
-		LISTENING,
-		PAUSE,
-	};
-
 	RIO_EXTENSION_FUNCTION_TABLE m_RioFunctionTable;
 	RIO_CQ m_RioCompletionQueue[MAX_RIO_THREAD];
 

@@ -77,6 +77,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="VBuffer.h" />
+    <ClInclude Include="VBufferController.h" />
+    <ClInclude Include="VSessionManager.h" />
     <ClInclude Include="VClientSession.h" />
     <ClInclude Include="RIOBase.h" />
     <ClInclude Include="VNetwork.h" />

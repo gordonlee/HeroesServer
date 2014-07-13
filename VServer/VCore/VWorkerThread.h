@@ -48,52 +48,66 @@ namespace
 					lingerOption.l_onoff = 1;
 					lingerOption.l_linger = 0;
 
-					if (SOCKET_ERROR == setsockopt(context->mClientSession->GetClientSocket(), SOL_SOCKET, SO_LINGER, (char*)&lingerOption, sizeof(LINGER)))
+					if (SOCKET_ERROR == setsockopt(context->clientSession_->socket_, SOL_SOCKET, SO_LINGER, (char*)&lingerOption, sizeof(LINGER)))
 					{
 						printf_s("[DEBUG] setsockopt linger option error: %d\n", GetLastError());
 					}
 
-					closesocket(context->mClientSession->GetClientSocket());
-					delete context->mClientSession->GetBuffer();
+					closesocket(context->clientSession_->socket_);
 					delete context;
 
 				}
-				else if (IO_RECV == context->mIoType)
+				else if (IO_RECV == context->ioType_)
 				{
-					printf_s("%s\n", context->mClientSession->GetBuffer());
+					
 
-					context->mIoType = IO_SEND;
-					context->Length = strnlen_s(context->mClientSession->GetBuffer(), SESSION_BUFFER_SIZE);
+					PacketVector packetList = context->clientSession_->GetMessages(transferred);
 					DWORD flags = 0;
 
-					/// start async send
-					if (!m_RioFunctionTable.RIOSend(context->mClientSession->GetRequestQueue(), (PRIO_BUF)context, 1, flags, context))
+					RIO_BUF* buf = NULL;
+					context->ioType_ = IO_SEND;
+
+					for each (char* packet in packetList)
 					{
-						printf_s("[DEBUG] RIOSend error: %d\n", GetLastError());
+						printf_s("%s\n", packet);
 
-						delete context->mClientSession->GetBuffer();
-						delete context;
-						return false;
+						buf = context->clientSession_->AddSendBuffer(packet);
+						context->bufferID_ = buf->BufferId;
+
+						if (!m_RioFunctionTable.RIOSend(context->clientSession_->requestQueue_, buf, 1, flags, context))
+						{
+							printf_s("[DEBUG] RIOSend error: %d\n", GetLastError());
+
+							delete context;
+							continue;
+						}
+
+						context = new RioIoContext(context->clientSession_, IO_SEND);
 					}
-
 				}
-				else if (IO_SEND == context->mIoType)
+				else if (IO_SEND == context->ioType_)
 				{
-					context->mIoType = IO_RECV;
-					context->Offset = 0;
-
-					DWORD recvbytes = 0;
 					DWORD flags = 0;
 
-					/// start async recv
-					if (!m_RioFunctionTable.RIOReceive(context->mClientSession->GetRequestQueue(), (PRIO_BUF)context, 1, flags, context))
-					{
-						printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
+					context->clientSession_->ReleaseBuffer(context->bufferID_);
 
-						delete context->mClientSession->GetBuffer();
-						delete context;
-						return -1;
+					if (context->isMainContext_)
+					{
+						context->bufferID_ = RIO_INVALID_BUFFERID;
+						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
+						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
+						{
+							printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
+
+							delete context;
+							return -1;
+						}
 					}
+					else
+					{
+						delete context;
+					}
+
 				}
 
 			}
