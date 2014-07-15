@@ -6,6 +6,7 @@
 #include <process.h>
 
 #include "RIOBase.h"
+#include "VSessionManager.h"
 
 
 namespace VCore
@@ -15,32 +16,22 @@ namespace VCore
 
 	public:
 		__declspec(dllexport) VNetwork(int port);
-		__declspec(dllexport) ErrorMessage Initialize();
-		__declspec(dllexport) ErrorMessage SetMaximumUser();
-		__declspec(dllexport) ErrorMessage Run();
-		__declspec(dllexport) ErrorMessage Pause();
-		__declspec(dllexport) ErrorMessage Stop();
-		__declspec(dllexport) ErrorMessage Accept();
-		__declspec(dllexport) ClientSession* ConnetClientSession(SOCKET socket);
-
-		RIO_CQ GetCompletionQueue(int index)
-		{
-			return m_RioCompletionQueue[index];
-		}
-
-		void SetCompletionQueue(int index, RIO_CQ cq)
-		{
-			m_RioCompletionQueue[index] = cq;
-		}
+		__declspec(dllexport) bool Initialize();
+		__declspec(dllexport) bool SetMaximumUser();
+		__declspec(dllexport) bool Run();
+		__declspec(dllexport) bool Pause();
+		__declspec(dllexport) bool Stop();
+		__declspec(dllexport) bool Accept();
 
 	private:
-		int m_CurrentThreadID;
+		int currentThreadID_;
 
-		ListenSocketState m_CurrentState;
-
-		int		m_Port;
-		SOCKET	m_ListenSocket;
+		int		port_;
+		SOCKET	listenSocket_;
 		
+		VSessionManager sessionManager_;
+
+		ULONG sessionID_;
 	};
 
 

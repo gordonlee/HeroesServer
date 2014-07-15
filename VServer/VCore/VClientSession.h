@@ -4,79 +4,83 @@
 #include <MSWSock.h>
 
 #include "RIOBase.h"
+#include "VBufferController.h"
 
 namespace VCore
 {
-	class ClientSession
+	class ClientSession : public VBufferController
 	{
 	public:
-		ClientSession(SOCKET socket, char* buffer)
+		ClientSession(SOCKET socket)
+			:socket_(socket), VBufferController(SESSION_BUFFER_SIZE)
 		{
-			m_socket = socket;
-			m_buffer = buffer;
-		}
-		char* GetBuffer()
-		{
-			return m_buffer;
-		}
-		void SetBufferID(RIO_BUFFERID bufferID)
-		{
-			m_bufferID = bufferID;
+			SOCKADDR_IN clientaddr;
+			int addrlen = sizeof(clientaddr);
+			getpeername(socket, (SOCKADDR*)&clientaddr, &addrlen);
+
+			addr_ = clientaddr;
+
+			// Non-Blocking I/O 세팅
+			u_long arg = 1;
+			ioctlsocket(socket_, FIONBIO, &arg);
+
+			// Nagle OFF
+			int opt = 1;
+			setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, (const char*)&opt, sizeof(int));
 		}
 
-		RIO_BUFFERID GetBufferID()
+		//TODO: 나중에 rio base로 옮기자
+		bool SetRequestQueue(int currentThreadID)
 		{
-			return m_bufferID;
-		}
+			// RQ 생성
+			//client->mRequestQueue =
+			requestQueue_ =
+				m_RioFunctionTable.RIOCreateRequestQueue(
+				socket_,
+				MAX_RECV_RQ_SIZE_PER_SOCKET,
+				1,
+				MAX_SEND_RQ_SIZE_PER_SOCKET,
+				1,
+				m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
+				m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
+				NULL);
 
-		SOCKET GetClientSocket()
-		{
-			return m_socket;
-		}
+			if (requestQueue_ == RIO_INVALID_RQ)
+			{
+				printf_s("[DEBUG] RIOCreateRequestQueue Error: %d\n", GetLastError());
+				return NULL;
+			}
 
-		void SetRequestQueue(RIO_RQ rq)
-		{
-			m_RequestQueue = rq;
+			return true;
 		}
-
-		RIO_RQ GetRequestQueue()
-		{
-			return m_RequestQueue;
-		}
-
-		void SetAddress(SOCKADDR_IN addr)
-		{
-			memcpy(&(m_Addr), &addr, sizeof(SOCKADDR_IN));
-		}
-
-		SOCKADDR_IN GetAddress()
-		{
-			return m_Addr;
-		}
-
-		bool IsConnected();
-		bool DisConnect();
 		
-	private:
-		SOCKET m_socket;
-		char* m_buffer;
-		RIO_BUFFERID m_bufferID;
+		SOCKET			socket_;
+		RIO_BUFFERID	bufferID_;
 
-		RIO_RQ m_RequestQueue;
-		SOCKADDR_IN		m_Addr;
+		RIO_RQ			requestQueue_;
+		SOCKADDR_IN		addr_;
 	};
 
-	class RioIoContext : public RIO_BUF
+	class RioIoContext
 	{
 	public:
 		RioIoContext(ClientSession* client, IOType ioType)
+			: RioIoContext(client, ioType, false)
 		{
-			mClientSession = client;
-			mIoType = ioType;
 		}
 
-		ClientSession* mClientSession;
-		VCore::IOType	mIoType;
+		RioIoContext(ClientSession* client, IOType ioType, bool isMainContext)
+			: clientSession_(client)
+			, ioType_(ioType)
+			, isMainContext_(isMainContext)
+			, bufferID_(RIO_INVALID_BUFFERID)
+		{
+		}
+
+		bool isMainContext_;
+		ClientSession*	clientSession_;
+		VCore::IOType	ioType_;
+		RIO_BUFFERID	bufferID_;
 	};
 }
 
