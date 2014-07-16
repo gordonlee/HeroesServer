@@ -103,11 +103,7 @@ void session::ParsePacket()
 		BYTE flag = 0;
 		
 
-		if ( CheckHeader(begin, bodysize, flag , DEF_HEADER_CHECKSUM ) )
-		{
-			index += DEF_HEADER_SIZE;//Header size
-		}
-		else
+		if ( CheckHeader(begin, bodysize, flag , DEF_HEADER_CHECKSUM )  == false)
 		{
 			//만약 패킷이 깨져 들어 왔을 경우에는 해당 패킷의 마지막 또는 다음 패킷 헤더의 앞까지 버려야 한다.
 			// Ver 0.1 에서는 일단 break; 처리한다.			
@@ -118,11 +114,11 @@ void session::ParsePacket()
 		char packet[DEF_MAX_PACKETSIZE];//65532
 		ZeroMemory(packet, DEF_MAX_PACKETSIZE);
 
-		if ( bodysize + index <= cir_buffer_.size() )
-		{
-			memcpy_s(packet, bodysize + index, (char*)begin, bodysize + index);
+		if (bodysize + DEF_HEADER_SIZE <= cir_buffer_.size())
+		{			
+			GetData(packet, begin, index ,bodysize + DEF_HEADER_SIZE);
 
-			cir_buffer_.erase_begin( bodysize + index );			
+			cir_buffer_.erase_begin(index);
 		}
 		else
 		{
@@ -167,7 +163,7 @@ void session::SendTestPacket(char* packet, unsigned short bodysize, BYTE flag)
 
 	MakeHeader(sendbuff, idx,  bodysize, flag, DEF_HEADER_CHECKSUM);
 
-	SetData(sendbuff, packet, idx, bodysize);
+	SetData(sendbuff , packet + idx , idx, bodysize);
 
 
 	if (flag == DEF_FLAG_ECHO)
