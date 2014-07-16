@@ -1,5 +1,4 @@
 // Copyright 2014 GordonLee
-// Copyright 2014 GordonLee
 #pragma once 
 #include "ILogger.h"
 #include <stdio.h>

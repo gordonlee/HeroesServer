@@ -1,4 +1,6 @@
 // Copyright 2014 GordonLee
+#pragma once
+
 
 #include "common_header/base_header.h"
 

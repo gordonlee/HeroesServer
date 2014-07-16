@@ -30,22 +30,28 @@
     <Filter Include="Utility\Buffer">
       <UniqueIdentifier>{59a832a9-9fa1-4dc7-b3eb-f21c6eeca862}</UniqueIdentifier>
     </Filter>
+    <Filter Include="packet">
+      <UniqueIdentifier>{7675597b-3bd1-448c-b24c-a17247a93957}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\iocp\CIocp.cpp">
-      <Filter>iocp</Filter>
-    </ClCompile>
     <ClCompile Include="src\network\network.cpp">
       <Filter>network</Filter>
     </ClCompile>
+    <ClCompile Include="src\socket\TcpServer.cpp">
+      <Filter>socket</Filter>
+    </ClCompile>
+    <ClCompile Include="src\socket\TcpClient.cpp">
+      <Filter>socket</Filter>
+    </ClCompile>
+    <ClCompile Include="src\iocp\Iocp.cpp">
+      <Filter>iocp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\iocp\CIocp.h">
-      <Filter>iocp</Filter>
-    </ClInclude>
     <ClInclude Include="src\utility\AutoLock.h">
       <Filter>Utility</Filter>
     </ClInclude>
@@ -282,6 +288,15 @@
     </ClInclude>
     <ClInclude Include="src\utility\Buffer.h">
       <Filter>Utility\Buffer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\iocp\Iocp.h">
+      <Filter>iocp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Packet.h">
+      <Filter>packet</Filter>
+    </ClInclude>
+    <ClInclude Include="src\iocp\iocp_structure.h">
+      <Filter>iocp</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

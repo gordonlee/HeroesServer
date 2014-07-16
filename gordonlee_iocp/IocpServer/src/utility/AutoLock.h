@@ -1,6 +1,5 @@
 // Copyright 2014 GordonLee
 // MEMO: Completely pass through Cpplint
-
 #pragma once
 
 #include "common_header/base_header.h"
