@@ -92,7 +92,7 @@
     <ClInclude Include="src\iocp\Iocp.h" />
     <ClInclude Include="src\iocp\iocp_structure.h" />
     <ClInclude Include="src\network\network.h" />
-    <ClInclude Include="src\Packet.h" />
+    <ClInclude Include="src\packet\Packet.h" />
     <ClInclude Include="src\socket\TcpClient.h" />
     <ClInclude Include="src\socket\TcpServer.h" />
     <ClInclude Include="src\socket\TcpSocket.h">

@@ -292,11 +292,11 @@
     <ClInclude Include="src\iocp\Iocp.h">
       <Filter>iocp</Filter>
     </ClInclude>
-    <ClInclude Include="src\Packet.h">
-      <Filter>packet</Filter>
-    </ClInclude>
     <ClInclude Include="src\iocp\iocp_structure.h">
       <Filter>iocp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\packet\Packet.h">
+      <Filter>packet</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
