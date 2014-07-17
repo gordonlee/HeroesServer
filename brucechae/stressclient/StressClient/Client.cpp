@@ -39,14 +39,14 @@ Client::Client(int id) : id_(id), workerThread_(nullptr)
 }
 
 Client::~Client()
-{
-	WSACleanup();
-	
+{	
 	if (workerThread_ != nullptr)
 	{
 		delete workerThread_;
 		workerThread_ = nullptr;
 	}
+
+	WSACleanup();
 }
 
 bool Client::Run()
@@ -73,6 +73,17 @@ bool Client::Run()
 
 void Client::Join()
 {
+	UInt64 joinStart = Time::Now();
+
+	// 아직 응답 받지 못한 데이터가 있다면 최대 5초동안 기다린다
+	while (memoryDataList_.size() > 0 && Time::Now() - joinStart < 5000)
+	{
+		// 응답이 올때까지 수신 시도
+		Read();
+		Process();
+		this_thread::sleep_for(Time::To(1));
+	}
+
 	if (workerThread_ != nullptr)
 	{
 		workerThread_->join();
@@ -94,7 +105,8 @@ void Client::Init()
 	totalSentCount_ = 0;
 	diffPacketCount_ = 0;
 	packetId_ = 0;
-	dataList_.clear();
+	memoryDataList_.clear();
+	toBeClose_ = false;
 }
 
 void Client::Update()
@@ -170,6 +182,12 @@ void Client::Close()
 
 void Client::TryClose()
 {
+	// 종료되어야 한다
+	if (toBeClose_ && memoryDataList_.size() <= 0)
+	{
+		Close();
+	}
+
 	if (config.closeProbPerFrame_ <= 0)
 	{
 		return;
@@ -178,7 +196,14 @@ void Client::TryClose()
 	int prob = min(config.closeProbPerFrame_, 100);
 	if (rand_.NextInt(((int)(10000 / prob)) - 1) == 0)
 	{
-		Close();
+		if (memoryDataList_.size() <= 0)
+		{
+			Close();
+		}
+		else
+		{
+			toBeClose_ = true;
+		}
 	}
 }
 
@@ -298,14 +323,14 @@ void Client::ProcessPacket(char* buf, int len)
 	// 내가 보낸 메시지
 	if (data->clientId_ == id_)
 	{
-		if (dataList_.count(data->packetId_) <= 0)
+		if (memoryDataList_.count(data->packetId_) <= 0)
 		{
 			Close();
 			return;
 		}
 
 		// 기억해 놓은 데이터 부분 가져오기
-		auto pair = dataList_[data->packetId_];
+		auto pair = memoryDataList_[data->packetId_];
 		if (pair.first == nullptr)
 		{
 			Close();
@@ -320,7 +345,7 @@ void Client::ProcessPacket(char* buf, int len)
 
 		// 기억해놓은 부분 삭제
 		delete pair.first;
-		dataList_.erase(data->packetId_);
+		memoryDataList_.erase(data->packetId_);
 
 		myPacketRecvCount_++;
 		myPacketResponseTimes_.first += responseTime;
@@ -338,6 +363,11 @@ void Client::ProcessPacket(char* buf, int len)
 void Client::Write()
 {
 	if (socket_ == INVALID_SOCKET)
+	{
+		return;
+	}
+
+	if (toBeClose_)
 	{
 		return;
 	}
@@ -397,9 +427,9 @@ void Client::Write()
 	char* memoryData = new char[dataSize];
 	memcpy(memoryData, (char*)data, dataSize);
 
-	if (dataList_.count(data->packetId_) <= 0)
+	if (memoryDataList_.count(data->packetId_) <= 0)
 	{
-		dataList_[data->packetId_] = make_pair(memoryData, dataSize);
+		memoryDataList_[data->packetId_] = make_pair(memoryData, dataSize);
 	}
 	else
 	{
@@ -429,6 +459,11 @@ void Client::WritePacket(char* buf, int len)
 void Client::Flush()
 {
 	if (socket_ == INVALID_SOCKET)
+	{
+		return;
+	}
+
+	if (toBeClose_)
 	{
 		return;
 	}

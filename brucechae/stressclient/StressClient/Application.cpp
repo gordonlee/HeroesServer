@@ -244,6 +244,11 @@ void Application::ChangeValue(const string& name, int& value)
 void Application::ChangeCloseProbPerFrame()
 {
 	ChangeValue("클라이언트 접속 종료 확률", config_.closeProbPerFrame_);
+	
+	if (config_.closeProbPerFrame_ > 0)
+	{
+		LOG("10000분의 %d의 확률로 클라이언트가 접속을 종료합니다. 접속이 종료된 클라이언트는 곧바로 다시 접속을 시도합니다.\n", config_.closeProbPerFrame_);
+	}
 }
 
 void Application::ChangeSendCountPerSec()
@@ -253,7 +258,13 @@ void Application::ChangeSendCountPerSec()
 
 void Application::ChangeSendPacketSize()
 {
+	int prevValue = config_.sendPacketSizeMax_;
 	ChangeValue("송신 패킷 사이즈", config_.sendPacketSizeMax_);
+
+	if (prevValue != config_.sendPacketSizeMax_)
+	{
+		LOG("1byte ~ %dbytes 사이의 데이터가 랜덤하게 송신됩니다\n", config_.sendPacketSizeMax_);
+	}
 }
 
 void Application::ChangeBroadcastFlag()
@@ -284,14 +295,19 @@ void Application::ChangeBroadcastFlag()
 		}
 		else if (all_of(input.begin(), input.end(), ::isdigit))
 		{
-			switch (stoi(input))
+			int num = stoi(input);
+			if (num == 1 || num == 2)
 			{
-			case 1: config_.broadcast_ = false; break;
-			case 2: config_.broadcast_ = true; break;
-			default: return;
-			}
+				switch (num)
+				{
+					case 1: config_.broadcast_ = false; break;
+					case 2: config_.broadcast_ = true; break;
+				}
 
-			LOG("변경 성공 flag: %s\n", getFlagStr(config_.broadcast_));
+				LOG("변경 성공 flag: %s\n", getFlagStr(config_.broadcast_));
+				LOG("패킷 헤더의 broadcast flag에 %s를 담아서 송신합니다\n", config_.broadcast_ ? "0x02" : "0x01");
+				return;
+			}
 		}
 	}
 

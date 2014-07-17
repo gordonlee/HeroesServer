@@ -22,7 +22,6 @@ struct Config
 	bool broadcast_ = false;
 };
 
-
 class Application
 {
 	unordered_map<string, function<void()>> functionTabel_;

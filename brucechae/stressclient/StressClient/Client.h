@@ -36,7 +36,9 @@ class Client
 	Int64 diffPacketCount_;
 
 	int packetId_;
-	unordered_map<int, pair<char*, int>> dataList_;
+	unordered_map<int, pair<char*, int>> memoryDataList_;
+
+	bool toBeClose_;
 
 public:
 	Client(int id);
