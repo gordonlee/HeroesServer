@@ -6,15 +6,8 @@
 
 namespace VCore
 {
-	class IHeader
-	{
-	public:
-		SHORT	Lenth;
-		BYTE	Type;
-		BYTE	CheckSum;
-	};
 
-	typedef std::vector<char*> PacketVector;
+	typedef std::vector<IPacket*> PacketVector;
 
 	class VBufferController
 	{
@@ -24,15 +17,12 @@ namespace VCore
 
 	public:
 		VBufferController()
+			:packetVector_(), buffer_()
 		{
+			buffer_.RegisterBuffer();
 		}
 
-		VBufferController(size_t bufferSize)
-			:packetVector_(), buffer_(bufferSize)
-		{
-		}
-
-		RIO_BUF* AddSendBuffer(char* message)
+		RIO_BUF* AddSendBuffer(IPacket* message)
 		{
 			return buffer_.InsertData(message);
 		}
@@ -55,19 +45,23 @@ namespace VCore
 			{
 				memcpy_s(&header, sizeof(IHeader), buffer, sizeof(IHeader));
 
-				if ((ULONG)header.Lenth > recieveLenth-4)
+				if ((ULONG)header.Lenth > recieveLenth - sizeof(IHeader))
 				{
 					return packetVector_;
 				}
 
-				char* message = new char(header.Lenth + 1);
+				IPacket* message = new IPacket();
+				ULONG messageLenth = header.Lenth + sizeof(IHeader);
 
-				memset(message, 0x00, header.Lenth);
-				memcpy_s(message, header.Lenth, buffer, header.Lenth);
+				message->Data = new char[messageLenth];
+				message->Lenth = messageLenth;
+
+				memset(message->Data, 0x00, message->Lenth);
+				memcpy_s(message->Data, messageLenth, buffer, messageLenth);
 
 				packetVector_.push_back(message);
 
-				int processLenth = sizeof(IHeader)+header.Lenth;
+				int processLenth = messageLenth;
 
 				buffer += processLenth;
 				totalLenth -= processLenth;

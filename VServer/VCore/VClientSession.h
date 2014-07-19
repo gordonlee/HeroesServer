@@ -12,7 +12,7 @@ namespace VCore
 	{
 	public:
 		ClientSession(SOCKET socket)
-			:socket_(socket), VBufferController(SESSION_BUFFER_SIZE)
+			:socket_(socket)
 		{
 			SOCKADDR_IN clientaddr;
 			int addrlen = sizeof(clientaddr);

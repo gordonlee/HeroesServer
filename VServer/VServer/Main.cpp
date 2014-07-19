@@ -5,7 +5,7 @@
 
 int main()
 {
-	VCore::VNetwork net(9011);
+	VCore::VNetwork net(9000);
 	net.Initialize();
 	net.Run();
 }

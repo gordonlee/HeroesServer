@@ -12,14 +12,12 @@ namespace VCore
 		typedef std::map<ULONG, ClientSession*> SessionMap;
 
 		SessionMap sessionList_;
-		VBufferController bufferController_;
 
 	public:
 		
 		VSessionManager()
+			: sessionList_()
 		{
-			bufferController_ = VBufferController(SESSION_BUFFER_SIZE);
-			sessionList_ = SessionMap();
 		}
 
 		ClientSession* GetSession(const int id)

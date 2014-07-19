@@ -28,4 +28,8 @@ namespace VCore
 	RIO_EXTENSION_FUNCTION_TABLE m_RioFunctionTable;
 	RIO_CQ m_RioCompletionQueue[MAX_RIO_THREAD];
 
+
+	ULONG RecieveConunt = 0;
+	ULONG SendConunt = 0;
+
 }

@@ -35,14 +35,36 @@ namespace
 				printf_s("[DEBUG] RIO CORRUPT CQ \n");
 			}
 
-			printf_s("[%d]Get result : %d", LIoThreadId, numResults);
+			printf_s("[%d]Get result : %d\n", LIoThreadId, numResults);
 
 			for (ULONG i = 0; i < numResults; ++i)
 			{
 				RioIoContext* context = reinterpret_cast<RioIoContext*>(results[i].RequestContext);
 				ULONG transferred = results[i].BytesTransferred;
 
-				if (transferred == 0)
+				printf_s("[%d]Lenth : %d\n", LIoThreadId, transferred);
+				if (transferred == 0 && results[i].Status != 0 && results[i].Status != 10054)
+				{
+					DWORD flags = 0;
+
+					if (context->isMainContext_)
+					{
+						context->bufferID_ = RIO_INVALID_BUFFERID;
+						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
+						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
+						{
+							printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
+
+							delete context;
+							return -1;
+						}
+					}
+					else
+					{
+						delete context;
+					}
+				}
+				else if (transferred == 0)
 				{
 					LINGER lingerOption;
 					lingerOption.l_onoff = 1;
@@ -59,21 +81,19 @@ namespace
 				}
 				else if (IO_RECV == context->ioType_)
 				{
-					
-
 					PacketVector packetList = context->clientSession_->GetMessages(transferred);
 					DWORD flags = 0;
 
 					RIO_BUF* buf = NULL;
 					context->ioType_ = IO_SEND;
 
-					for each (char* packet in packetList)
+					for each (IPacket* packet in packetList)
 					{
-						printf_s("%s\n", packet);
-
 						buf = context->clientSession_->AddSendBuffer(packet);
 						context->bufferID_ = buf->BufferId;
 
+						RecieveConunt++;
+						printf_s("[%d]RecieveMessage : %s\n", RecieveConunt, packet->Data + sizeof(IHeader)+12);
 						if (!m_RioFunctionTable.RIOSend(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
 							printf_s("[DEBUG] RIOSend error: %d\n", GetLastError());
@@ -90,11 +110,16 @@ namespace
 					DWORD flags = 0;
 
 					context->clientSession_->ReleaseBuffer(context->bufferID_);
+					context->ioType_ = IO_RECV;
 
 					if (context->isMainContext_)
 					{
+
+						SendConunt++;
+						printf_s("[%d]SendMessage\n", SendConunt);
 						context->bufferID_ = RIO_INVALID_BUFFERID;
 						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
+
 						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
 							printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());

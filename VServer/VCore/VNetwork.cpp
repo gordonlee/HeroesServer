@@ -77,7 +77,7 @@ namespace VCore
 
 		while (true)
 		{
-			if (Accept() != false)
+			if (!Accept())
 			{
 				printf_s("AcceptUser Fail.\n");
 				continue;
@@ -109,7 +109,7 @@ namespace VCore
 			delete mainContext;
 			return false;
 		}
-
+		currentThreadID_ = (currentThreadID_ + 1) % MAX_RIO_THREAD;
 
 		return true;
 	}

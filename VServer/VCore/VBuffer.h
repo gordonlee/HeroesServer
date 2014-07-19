@@ -5,19 +5,27 @@
 
 namespace VCore
 {
+	class IHeader
+	{
+	public:
+		SHORT	Lenth;
+		BYTE	Type;
+		BYTE	CheckSum;
+	};
+
+	class IPacket
+	{
+	public:
+		ULONG Lenth;
+		char* Data;
+	};
 
 	class VBuffer
 	{
 	public:
 		VBuffer()
-		{
-
-		}
-
-		VBuffer(size_t bufferSize)
-			: buffer_(new char(bufferSize))
-			, remainLenth_(bufferSize)
-			, maxSize_(bufferSize)
+			: remainLenth_(SESSION_BUFFER_SIZE)
+			, maxSize_(SESSION_BUFFER_SIZE)
 			, startOffset_(0)
 			, sendBufferMap_()
 		{
@@ -54,7 +62,7 @@ namespace VCore
 		}
 
 		//Message 자체를 RIO Buffer로 등록하고 데이터를 전송한다.
-		RIO_BUF* InsertData(char* message)
+		RIO_BUF* InsertData(IPacket* message)
 		{
 			return MakeRioBuf(message);
 		}
@@ -84,11 +92,9 @@ namespace VCore
 			return rioBuf;
 		}
 
-		RIO_BUF* MakeRioBuf(char* message)
+		RIO_BUF* MakeRioBuf(IPacket* message)
 		{
-			size_t messageLenth = strlen(message);
-
-			RIO_BUFFERID id = m_RioFunctionTable.RIORegisterBuffer(message, messageLenth);
+			RIO_BUFFERID id = m_RioFunctionTable.RIORegisterBuffer(message->Data, message->Lenth);
 
 			if ( id == RIO_INVALID_BUFFERID)
 			{
@@ -97,10 +103,10 @@ namespace VCore
 
 			RIO_BUF* rioBuf = new RIO_BUF();
 			rioBuf->BufferId = id;
-			rioBuf->Length = messageLenth;
+			rioBuf->Length = message->Lenth;
 			rioBuf->Offset = 0;
 
-			sendBufferMap_.insert(SendBufferMap::value_type(id, message));
+			sendBufferMap_.insert(SendBufferMap::value_type(id, message->Data));
 
 			return rioBuf;
 		}
@@ -109,7 +115,7 @@ namespace VCore
 
 	private:
 
-		char* buffer_;
+		char buffer_[SESSION_BUFFER_SIZE];
 		RIO_BUFFERID bufferID_;
 		ULONG remainLenth_;
 		size_t maxSize_;
