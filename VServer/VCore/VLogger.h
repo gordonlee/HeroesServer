@@ -19,7 +19,6 @@ namespace VCore
 	class Logger
 	{
 	public:
-
 		static void Debug(char* message)
 		{
 			Log(LogLevel::DEBUG, message);
@@ -27,7 +26,7 @@ namespace VCore
 
 		static void Info(char* message)
 		{
-			//Log(LogLevel::INFO, message);
+			Log(LogLevel::INFO, message);
 		}
 
 		static void Warn(char* message)
@@ -78,8 +77,6 @@ namespace VCore
 
 		static void Log(LogLevel level, char* message)
 		{
-			//printf_s("[%s] - ", typeid(T).name());
-
 			switch (level)
 			{
 			case LogLevel::DEBUG:
@@ -102,7 +99,15 @@ namespace VCore
 				break;
 			}
 
-			printf_s("%s", message);
+
+			if (level == LogLevel::SEND || level == LogLevel::RECV)
+			{
+				printf_s("%s", message);
+			}
+			else
+			{
+				printf_s("[%s] - %s\n", typeid(T).name(), message);
+			}
 
 			SetColor(LOG_COLOR::BLACK, LOG_COLOR::GRAY);
 		}

@@ -34,14 +34,13 @@ namespace VCore
 
 		~VBuffer()
 		{
-			delete buffer_;
 		}
 
 		//TODO: 나중에 rio base로 옮기자
 		bool RegisterBuffer()
 		{
 			// RIO 버퍼 등록 & 클라이언트에 생성된 버퍼ID 저장
-			bufferID_ = m_RioFunctionTable.RIORegisterBuffer(buffer_, SESSION_BUFFER_SIZE);
+			bufferID_ = RIOBase::GetInstance()->RIORegisterBuffer(buffer_, SESSION_BUFFER_SIZE);
 
 			if (bufferID_ == RIO_INVALID_BUFFERID)
 			{
@@ -54,7 +53,7 @@ namespace VCore
 
 		bool ReleaseBuffer(RIO_BUFFERID id)
 		{
-			m_RioFunctionTable.RIODeregisterBuffer(id);
+			RIOBase::GetInstance()->RIODeregisterBuffer(id);
 			delete sendBufferMap_[id];
 			sendBufferMap_.erase(id);
 
@@ -94,7 +93,7 @@ namespace VCore
 
 		RIO_BUF* MakeRioBuf(IPacket* message)
 		{
-			RIO_BUFFERID id = m_RioFunctionTable.RIORegisterBuffer(message->Data, message->Lenth);
+			RIO_BUFFERID id = RIOBase::GetInstance()->RIORegisterBuffer(message->Data, message->Lenth);
 
 			if ( id == RIO_INVALID_BUFFERID)
 			{

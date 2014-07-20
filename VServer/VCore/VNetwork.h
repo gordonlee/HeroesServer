@@ -4,6 +4,7 @@
 #include <WinSock2.h>
 #include <MSWSock.h>
 #include <process.h>
+#include <thread>
 
 #include "RIOBase.h"
 #include "VSessionManager.h"
@@ -23,6 +24,8 @@ namespace VCore
 		__declspec(dllexport) bool Stop();
 		__declspec(dllexport) bool Accept();
 
+		VOID Worker(int threadID);
+
 	private:
 		int currentThreadID_;
 
@@ -30,6 +33,8 @@ namespace VCore
 		SOCKET	listenSocket_;
 		
 		VSessionManager sessionManager_;
+
+		std::thread workerThread[MAX_RIO_THREAD];
 
 		ULONG sessionID_;
 	};
