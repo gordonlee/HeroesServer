@@ -142,6 +142,7 @@
   <ItemGroup>
     <ClInclude Include="VBuffer.h" />
     <ClInclude Include="VBufferController.h" />
+    <ClInclude Include="VLogger.h" />
     <ClInclude Include="VSessionManager.h" />
     <ClInclude Include="VClientSession.h" />
     <ClInclude Include="RIOBase.h" />

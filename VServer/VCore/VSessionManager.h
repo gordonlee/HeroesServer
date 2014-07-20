@@ -2,6 +2,7 @@
 #include <map>
 #include "VClientSession.h"
 #include "VBufferController.h"
+#include "VLogger.h"
 
 namespace VCore
 {
@@ -10,37 +11,40 @@ namespace VCore
 	private:
 
 		typedef std::map<ULONG, ClientSession*> SessionMap;
+		typedef std::vector<ClientSession*> SessionVector;
 
-		SessionMap sessionList_;
+		SessionVector	remainSsession_;
+		SessionMap		usingSsession_;
 
 	public:
 		
 		VSessionManager()
-			: sessionList_()
+			: remainSsession_(), usingSsession_()
 		{
 		}
 
-		ClientSession* GetSession(const int id)
+		ClientSession* GetSession(const ULONG id)
 		{
-			return sessionList_[id];
+			if (remainSsession_.size() > 0)
+			{
+				usingSsession_.insert(SessionMap::value_type(id, remainSsession_.back()));
+				remainSsession_.pop_back();
+			}
+
+			return usingSsession_[id];
 		}
 
-		SessionMap::const_iterator Begin()
-		{
-			return sessionList_.begin();
-		}
 
-		SessionMap::const_iterator End()
+		VOID MakeSession(const UINT maxSessionCount)
 		{
-			return sessionList_.end();
-		}
+			for (UINT id = 0; id < maxSessionCount; ++id)
+			{
+				ClientSession* client = new ClientSession();
+				remainSsession_.push_back(client);
 
-		ClientSession* MakeSession(const ULONG id, SOCKET acceptedSock)
-		{
-			ClientSession* client = new ClientSession(acceptedSock);
-			sessionList_.insert(SessionMap::value_type(id, client));
+				Logger<VSessionManager>::Info("Make new session");
+			}
 
-			return client;
 		}
 
 	};

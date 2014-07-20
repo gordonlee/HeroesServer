@@ -11,9 +11,13 @@ namespace VCore
 	class ClientSession : public VBufferController
 	{
 	public:
-		ClientSession(SOCKET socket)
-			:socket_(socket)
+		ClientSession()
 		{
+		}
+
+		bool Initialize(int currentThreadID, SOCKET socket)
+		{
+			socket_ = socket;
 			SOCKADDR_IN clientaddr;
 			int addrlen = sizeof(clientaddr);
 			getpeername(socket, (SOCKADDR*)&clientaddr, &addrlen);
@@ -27,28 +31,30 @@ namespace VCore
 			// Nagle OFF
 			int opt = 1;
 			setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, (const char*)&opt, sizeof(int));
+
+			return RegisterRequestQueue(currentThreadID);
+
 		}
 
-		//TODO: 나중에 rio base로 옮기자
-		bool SetRequestQueue(int currentThreadID)
+		bool RegisterRequestQueue(int currentThreadID)
 		{
 			// RQ 생성
-			//client->mRequestQueue =
+			// TODO : 이건 나중에 rio_base로 빼버리자
 			requestQueue_ =
-				m_RioFunctionTable.RIOCreateRequestQueue(
-				socket_,
-				MAX_RECV_RQ_SIZE_PER_SOCKET,
-				1,
-				MAX_SEND_RQ_SIZE_PER_SOCKET,
-				1,
-				m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
-				m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
-				NULL);
+			m_RioFunctionTable.RIOCreateRequestQueue(
+			socket_,
+			MAX_RECV_RQ_SIZE_PER_SOCKET,
+			1,
+			MAX_SEND_RQ_SIZE_PER_SOCKET,
+			1,
+			m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
+			m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
+			NULL);
 
 			if (requestQueue_ == RIO_INVALID_RQ)
 			{
 				printf_s("[DEBUG] RIOCreateRequestQueue Error: %d\n", GetLastError());
-				return NULL;
+				return false;
 			}
 
 			return true;

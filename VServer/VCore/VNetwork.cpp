@@ -1,6 +1,7 @@
 #include "VNetwork.h"
 #include "VClientSession.h"
 #include "VWorkerThread.h"
+#include "VLogger.h"
 
 namespace VCore
 {
@@ -14,11 +15,12 @@ namespace VCore
 
 	bool VNetwork::Initialize()
 	{
-		printf_s("소켓 초기화\n");
+		Logger<VNetwork>::Info("Start Initialize.");
+
 		WSADATA wsa;
 		if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		{
-			printf("WInSock 초기화 실패\n");
+			Logger<VNetwork>::Fatal("WSA Initialize fail.");
 			return false;
 		}
 
@@ -26,7 +28,7 @@ namespace VCore
 		listenSocket_ = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_REGISTERED_IO);
 		if (listenSocket_ == INVALID_SOCKET)
 		{
-			printf("Listen 소켓 초기화 실패\n");
+			Logger<VNetwork>::Fatal("Listen soket Initialize fail.");
 			return false;
 		}
 
@@ -43,7 +45,7 @@ namespace VCore
 
 		if (SOCKET_ERROR == bind(listenSocket_, (SOCKADDR*)&serveraddr, sizeof(serveraddr)))
 		{
-			printf("Bind Listen 소켓 실패\n");
+			Logger<VNetwork>::Fatal("Listen soket bind fail.");
 			return false;
 		}
 
@@ -52,16 +54,18 @@ namespace VCore
 		DWORD dwBytes = 0;
 		if (WSAIoctl(listenSocket_, SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER, &functionTableId, sizeof(GUID), (void**)&m_RioFunctionTable, sizeof(m_RioFunctionTable), &dwBytes, NULL, NULL))
 		{
-			printf("RIO FunctionTable 초기화 실패\n");
+			Logger<VNetwork>::Fatal("RIO Function table initialize fail.");
 			return false;
 		}
+
+		sessionManager_.MakeSession(MAX_SESSION);
 
 		return true;
 	}
 
 	bool VNetwork::Run()
 	{
-		printf_s("Begin thread\n");
+		Logger<VNetwork>::Info("Execute woker thread.");
 		for (int threadIndex = 0; threadIndex < MAX_RIO_THREAD; ++threadIndex)
 		{
 			DWORD dwThreadId;
@@ -71,15 +75,20 @@ namespace VCore
 				return false;
 		}
 
-		printf_s("Start Listen Server\n");
 		if (SOCKET_ERROR == listen(listenSocket_, SOMAXCONN))
+		{
+			Logger<VNetwork>::Fatal("Listen fail.");
 			return false;
+		}
+			
+
+		Logger<VNetwork>::Info("Run Server.");
 
 		while (true)
 		{
 			if (!Accept())
 			{
-				printf_s("AcceptUser Fail.\n");
+				Logger<VNetwork>::Fatal("Accept fail.");
 				continue;
 			}
 		}
@@ -90,14 +99,12 @@ namespace VCore
 		SOCKET acceptedSock = accept(listenSocket_, NULL, NULL);
 		if (acceptedSock == INVALID_SOCKET)
 		{
-			printf_s("[DEBUG] accept: invalid socket\n");
+			Logger<VNetwork>::Fatal("Accept : Invalid socket.");
 			return false;
 		}
 
-		printf_s("accept\n");
-
-		ClientSession* client = sessionManager_.MakeSession(sessionID_ ,acceptedSock);
-		client->SetRequestQueue(currentThreadID_);
+		ClientSession* client = sessionManager_.GetSession(sessionID_);
+		client->Initialize(currentThreadID_, acceptedSock);
 
 		RioIoContext* mainContext = new RioIoContext(client, IO_RECV, true);
 		DWORD flags = 0;
@@ -105,11 +112,13 @@ namespace VCore
 		/// start async recv
 		if (!m_RioFunctionTable.RIOReceive(client->requestQueue_, client->GetRecieveBuffer(), 1, flags, mainContext))
 		{
-			printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
+			//TODO :  Logger 포멧 적용하기 GetLastError()
+			Logger<VNetwork>::Fatal("RIOReceive error.");
 			delete mainContext;
 			return false;
 		}
 		currentThreadID_ = (currentThreadID_ + 1) % MAX_RIO_THREAD;
+		sessionID_++;
 
 		return true;
 	}

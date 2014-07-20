@@ -32,10 +32,9 @@ namespace VCore
 			return buffer_.ReleaseBuffer(id);
 		}
 
-		const PacketVector& GetMessages(ULONG recieveLenth)
+		PacketVector& GetMessages(ULONG recieveLenth)
 		{
 			packetVector_.clear();
-
 			char*buffer = buffer_.GetBuffer();
 			
 			IHeader header = IHeader();
@@ -53,10 +52,10 @@ namespace VCore
 				IPacket* message = new IPacket();
 				ULONG messageLenth = header.Lenth + sizeof(IHeader);
 
-				message->Data = new char[messageLenth];
+				message->Data = new char[messageLenth+1];
 				message->Lenth = messageLenth;
 
-				memset(message->Data, 0x00, message->Lenth);
+				memset(message->Data, 0x00, messageLenth + 1);
 				memcpy_s(message->Data, messageLenth, buffer, messageLenth);
 
 				packetVector_.push_back(message);

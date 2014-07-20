@@ -2,6 +2,7 @@
 #include "VNetwork.h"
 #include "VClientSession.h"
 #include "RIOBase.h"
+#include "VLogger.h"
 
 using namespace VCore;
 
@@ -13,11 +14,13 @@ namespace
 	{
 		int LIoThreadId = reinterpret_cast<int>(lpParam);
 
+		// MAX_CQ_SIZE_PER_RIO_THREAD는 각각의 RQ길이 총 합보다 크거나 같아야한다.
 		m_RioCompletionQueue[LIoThreadId] = m_RioFunctionTable.RIOCreateCompletionQueue(MAX_CQ_SIZE_PER_RIO_THREAD, 0);
 
 		RIORESULT results[MAX_RIO_RESULT];
 
-		printf_s("Start Thread [%d]\n", LIoThreadId);
+		// TODO :  Thread ID 출력하자
+		Logger<VNetwork>::Info("Start Thread.");
 
 		while (true)
 		{
@@ -32,17 +35,17 @@ namespace
 			}
 			else if (numResults == RIO_CORRUPT_CQ)
 			{
-				printf_s("[DEBUG] RIO CORRUPT CQ \n");
+				Logger<VNetwork>::Fatal("RIO CORRUPT CQ.");
 			}
 
-			printf_s("[%d]Get result : %d\n", LIoThreadId, numResults);
+			//printf_s("[%d]Get result : %d\n", LIoThreadId, numResults);
 
 			for (ULONG i = 0; i < numResults; ++i)
 			{
 				RioIoContext* context = reinterpret_cast<RioIoContext*>(results[i].RequestContext);
 				ULONG transferred = results[i].BytesTransferred;
 
-				printf_s("[%d]Lenth : %d\n", LIoThreadId, transferred);
+				//printf_s("[%d]Lenth : %d\n", LIoThreadId, transferred);
 				if (transferred == 0 && results[i].Status != 0 && results[i].Status != 10054)
 				{
 					DWORD flags = 0;
@@ -53,7 +56,8 @@ namespace
 						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
 						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
-							printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
+							//printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
+							Logger<VNetwork>::Fatal("RIOReceive error.");
 
 							delete context;
 							return -1;
@@ -72,7 +76,8 @@ namespace
 
 					if (SOCKET_ERROR == setsockopt(context->clientSession_->socket_, SOL_SOCKET, SO_LINGER, (char*)&lingerOption, sizeof(LINGER)))
 					{
-						printf_s("[DEBUG] setsockopt linger option error: %d\n", GetLastError());
+						//printf_s("[DEBUG] setsockopt linger option error: %d\n", GetLastError());
+						Logger<VNetwork>::Fatal("setsockopt linger option error.");
 					}
 
 					closesocket(context->clientSession_->socket_);
@@ -81,7 +86,7 @@ namespace
 				}
 				else if (IO_RECV == context->ioType_)
 				{
-					PacketVector packetList = context->clientSession_->GetMessages(transferred);
+					PacketVector& packetList = context->clientSession_->GetMessages(transferred);
 					DWORD flags = 0;
 
 					RIO_BUF* buf = NULL;
@@ -90,13 +95,22 @@ namespace
 					for each (IPacket* packet in packetList)
 					{
 						buf = context->clientSession_->AddSendBuffer(packet);
+
+						if (buf == NULL)
+						{
+							Logger<VNetwork>::Fatal("buffer allocate fail!!!");
+							continue;
+						}
 						context->bufferID_ = buf->BufferId;
 
 						RecieveConunt++;
-						printf_s("[%d]RecieveMessage : %s\n", RecieveConunt, packet->Data + sizeof(IHeader)+12);
+
+						//Logger<VNetwork>::Recieve(",");
+						//Logger<VNetwork>::Info(packet->Data + sizeof(IHeader)+12);
 						if (!m_RioFunctionTable.RIOSend(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
-							printf_s("[DEBUG] RIOSend error: %d\n", GetLastError());
+							Logger<VNetwork>::Fatal("RIOSend error.");
+							//printf_s("[DEBUG] RIOSend error: %d\n", GetLastError());
 
 							delete context;
 							continue;
@@ -116,9 +130,11 @@ namespace
 					{
 
 						SendConunt++;
-						printf_s("[%d]SendMessage\n", SendConunt);
+						//printf_s(".", SendConunt);
 						context->bufferID_ = RIO_INVALID_BUFFERID;
 						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
+
+						//Logger<VNetwork>::Send("`");
 
 						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
