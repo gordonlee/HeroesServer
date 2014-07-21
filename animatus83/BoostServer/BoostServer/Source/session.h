@@ -3,6 +3,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/circular_buffer.hpp>
+#include "common/Define.h"
 
 using boost::asio::ip::tcp;
 
@@ -18,6 +19,8 @@ public:
 	tcp::socket& socket();
 
 	void start();
+	void Shudown();
+	int GetSocketID();
 	void SendPacket(char* sendbuff, int sendsize);
 
 private:
@@ -32,15 +35,21 @@ private:
 	bool CheckHeader(char* begin, unsigned short& bodysize, BYTE& flag, BYTE checksum);
 	void SendTestPacket(char* packet, unsigned short bodysize, BYTE flag);
 	void MakeHeader(char* sendbuff, int& idx, unsigned short bodysize, BYTE flag, BYTE checksum);
+
+	
 	
 
 	server* parentserver_;
 
 	boost::asio::io_service::strand strand_;
 	tcp::socket socket_;
-	enum { max_length = 1024 };
-	char data_[max_length];
-	boost::circular_buffer<BYTE> cir_buffer_;	
+	
+	char data_[DEF_MAX_PACKETSIZE * 10];
+	boost::circular_buffer<BYTE>* cir_buffer_;
+	long packet_cnt_;
+
+	long recvcnt;
+	long processcnt;
 };
 
 #endif

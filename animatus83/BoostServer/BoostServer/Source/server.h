@@ -20,7 +20,8 @@ private:
 	boost::asio::io_service& io_service_;
 	tcp::acceptor acceptor_;
 
-	std::list< session*  > sessions_;
+	
+	std::map< int, session*  > sessions_;
 };
 
 static server* g_server = NULL;

@@ -1,9 +1,10 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread.hpp>
 #include "server.h"
 
-
+boost::mutex sessionmutex_;
 
 server::server(boost::asio::io_service& io_service, short port)
 	: io_service_(io_service),
@@ -37,29 +38,28 @@ void server::handle_accept(session* new_session, const boost::system::error_code
 
 
 void server::BroadCast(char* sendbuff,int sendsize)
-{
-	BOOST_FOREACH(session* target, sessions_)
-	{
-		target->SendPacket(sendbuff, sendsize);
-	}
+{	
+	//target->SendPacket(sendbuff, sendsize);	
 }
 
 void server::AddSession(session* addsession)
-{
-	sessions_.push_back(addsession);
-	std::cout << addsession->socket().native().remote_endpoint().address().to_string() << " [ " << addsession->socket().native().remote_endpoint().port() << " ] "<< "\t: Connect" << std::endl;
+{	
+	boost::lock_guard<boost::mutex> lock(sessionmutex_);
+	sessions_.insert(std::pair<int, session*>(addsession->GetSocketID(), addsession));
+	//std::cout << addsession->socket().native().remote_endpoint().address().to_string() << " [ " << addsession->socket().native().remote_endpoint().port() << " ] "<< "\t: Connect" << std::endl;
+
+	
 }
 
 void server::DelSession(session* delsession)
 {
-	BOOST_FOREACH(session* comp, sessions_)
+	boost::lock_guard<boost::mutex> lock(sessionmutex_);
+	if (sessions_.find(delsession->GetSocketID()) != sessions_.end())
 	{
-		if (comp == delsession)
-		{
-			sessions_.remove(comp);
-			std::cout << delsession->socket().native().remote_endpoint().address().to_string() << " [ " << delsession->socket().native().remote_endpoint().port() << " ] " << "\t: Disconnect" << std::endl;
-			return;
-		}
-	}
+		sessions_.erase(delsession->GetSocketID());
+		//std::cout << delsession->socket().native().remote_endpoint().address().to_string() << " [ " << delsession->socket().native().remote_endpoint().port() << " ] " << "\t: Disconnect" << std::endl;
+
+		delsession->Shudown();
+	}	
 }
 
