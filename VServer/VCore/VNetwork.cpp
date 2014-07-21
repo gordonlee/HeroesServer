@@ -43,21 +43,18 @@ namespace VCore
 		serveraddr.sin_port = htons(port_);
 		serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-		if (bind(listenSocket_, (SOCKADDR*)&serveraddr, sizeof(serveraddr)) == SOCKET_ERROR)
+		if (SOCKET_ERROR == bind(listenSocket_, (SOCKADDR*)&serveraddr, sizeof(serveraddr)))
 		{
 			Logger<VNetwork>::Fatal("Listen soket bind fail.");
 			return false;
 		}
 
-		if (RIOBase::GetInstance()->Initialize(listenSocket_) == SOCKET_ERROR)
+		// RIO FunctionTbale 초기화
+		GUID functionTableId = WSAID_MULTIPLE_RIO;
+		DWORD dwBytes = 0;
+		if (WSAIoctl(listenSocket_, SIO_GET_MULTIPLE_EXTENSION_FUNCTION_POINTER, &functionTableId, sizeof(GUID), (void**)&m_RioFunctionTable, sizeof(m_RioFunctionTable), &dwBytes, NULL, NULL))
 		{
 			Logger<VNetwork>::Fatal("RIO Function table initialize fail.");
-			return false;
-		}
-
-		if (RIOBase::GetInstance()->MakeCompletionQueue(MAX_RIO_THREAD) == FALSE)
-		{
-			Logger<VNetwork>::Fatal("Make completion queue fail.");
 			return false;
 		}
 
@@ -71,8 +68,11 @@ namespace VCore
 		Logger<VNetwork>::Info("Execute woker thread.");
 		for (int threadIndex = 0; threadIndex < MAX_RIO_THREAD; ++threadIndex)
 		{
-			workerThread[threadIndex] = std::thread(&VNetwork::Worker, this, threadIndex);
-			workerThread[threadIndex].joinable();
+			DWORD dwThreadId;
+
+			HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, IoWorkerThread, (LPVOID)(threadIndex), 0, (unsigned int*)&dwThreadId);
+			if (hThread == NULL)
+				return false;
 		}
 
 		if (SOCKET_ERROR == listen(listenSocket_, SOMAXCONN))
@@ -92,11 +92,6 @@ namespace VCore
 				continue;
 			}
 		}
-
-		for (int threadIndex = 0; threadIndex < MAX_RIO_THREAD; ++threadIndex)
-		{
-			workerThread[threadIndex].join();
-		}
 	}
 
 	bool VNetwork::Accept()
@@ -109,20 +104,20 @@ namespace VCore
 		}
 
 		ClientSession* client = sessionManager_.GetSession(sessionID_);
-		client->Initialize(acceptedSock);
-		client->requestQueue_ = RIOBase::GetInstance()->GetRequestQueue(acceptedSock);
+		client->Initialize(currentThreadID_, acceptedSock);
 
 		RioIoContext* mainContext = new RioIoContext(client, IO_RECV, true);
 		DWORD flags = 0;
 
-		if (!RIOBase::GetInstance()->RIOReceive(client->requestQueue_, client->GetRecieveBuffer(), 1, flags, mainContext))
+		/// start async recv
+		if (!m_RioFunctionTable.RIOReceive(client->requestQueue_, client->GetRecieveBuffer(), 1, flags, mainContext))
 		{
 			//TODO :  Logger 포멧 적용하기 GetLastError()
 			Logger<VNetwork>::Fatal("RIOReceive error.");
 			delete mainContext;
 			return false;
 		}
-
+		currentThreadID_ = (currentThreadID_ + 1) % MAX_RIO_THREAD;
 		sessionID_++;
 
 		return true;

@@ -15,7 +15,7 @@ namespace VCore
 		{
 		}
 
-		bool Initialize(SOCKET socket)
+		bool Initialize(int currentThreadID, SOCKET socket)
 		{
 			socket_ = socket;
 			SOCKADDR_IN clientaddr;
@@ -32,10 +32,34 @@ namespace VCore
 			int opt = 1;
 			setsockopt(socket_, IPPROTO_TCP, TCP_NODELAY, (const char*)&opt, sizeof(int));
 
-			return true;
+			return RegisterRequestQueue(currentThreadID);
 
 		}
 
+		bool RegisterRequestQueue(int currentThreadID)
+		{
+			// RQ 생성
+			// TODO : 이건 나중에 rio_base로 빼버리자
+			requestQueue_ =
+			m_RioFunctionTable.RIOCreateRequestQueue(
+			socket_,
+			MAX_RECV_RQ_SIZE_PER_SOCKET,
+			1,
+			MAX_SEND_RQ_SIZE_PER_SOCKET,
+			1,
+			m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
+			m_RioCompletionQueue[currentThreadID % MAX_RIO_THREAD],
+			NULL);
+
+			if (requestQueue_ == RIO_INVALID_RQ)
+			{
+				printf_s("[DEBUG] RIOCreateRequestQueue Error: %d\n", GetLastError());
+				return false;
+			}
+
+			return true;
+		}
+		
 		SOCKET			socket_;
 		RIO_BUFFERID	bufferID_;
 

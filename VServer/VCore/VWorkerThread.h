@@ -4,13 +4,18 @@
 #include "RIOBase.h"
 #include "VLogger.h"
 
-namespace VCore
+using namespace VCore;
+
+namespace 
 {
 	__declspec(thread) int LIoThreadId = -1;
 
-	VOID VNetwork::Worker(int threadIndex)
+	unsigned int WINAPI IoWorkerThread(LPVOID lpParam)
 	{
-		int LIoThreadId = threadIndex;
+		int LIoThreadId = reinterpret_cast<int>(lpParam);
+
+		// MAX_CQ_SIZE_PER_RIO_THREAD는 각각의 RQ길이 총 합보다 크거나 같아야한다.
+		m_RioCompletionQueue[LIoThreadId] = m_RioFunctionTable.RIOCreateCompletionQueue(MAX_CQ_SIZE_PER_RIO_THREAD, 0);
 
 		RIORESULT results[MAX_RIO_RESULT];
 
@@ -21,17 +26,19 @@ namespace VCore
 		{
 			memset(results, 0, sizeof(results));
 
-			ULONG numResults = RIOBase::GetInstance()->RIODequeueCompletion(LIoThreadId, results, MAX_RIO_RESULT);
+			ULONG numResults = m_RioFunctionTable.RIODequeueCompletion(m_RioCompletionQueue[LIoThreadId], results, MAX_RIO_RESULT);
 
 			if (numResults == 0)
 			{
-				std::this_thread::yield();
+				Sleep(1);
 				continue;
 			}
 			else if (numResults == RIO_CORRUPT_CQ)
 			{
 				Logger<VNetwork>::Fatal("RIO CORRUPT CQ.");
 			}
+
+			//printf_s("[%d]Get result : %d\n", LIoThreadId, numResults);
 
 			for (ULONG i = 0; i < numResults; ++i)
 			{
@@ -47,13 +54,13 @@ namespace VCore
 					{
 						context->bufferID_ = RIO_INVALID_BUFFERID;
 						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
-						if (!RIOBase::GetInstance()->RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
+						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
 							//printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
 							Logger<VNetwork>::Fatal("RIOReceive error.");
 
 							delete context;
-							return;
+							return -1;
 						}
 					}
 					else
@@ -96,8 +103,11 @@ namespace VCore
 						}
 						context->bufferID_ = buf->BufferId;
 
+						RecieveConunt++;
+
+						//Logger<VNetwork>::Recieve(",");
 						//Logger<VNetwork>::Info(packet->Data + sizeof(IHeader)+12);
-						if (!RIOBase::GetInstance()->RIOSend(context->clientSession_->requestQueue_, buf, 1, flags, context))
+						if (!m_RioFunctionTable.RIOSend(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
 							Logger<VNetwork>::Fatal("RIOSend error.");
 							//printf_s("[DEBUG] RIOSend error: %d\n", GetLastError());
@@ -118,16 +128,20 @@ namespace VCore
 
 					if (context->isMainContext_)
 					{
+
+						SendConunt++;
 						//printf_s(".", SendConunt);
 						context->bufferID_ = RIO_INVALID_BUFFERID;
 						RIO_BUF* buf = context->clientSession_->GetRecieveBuffer();
 
-						if (!RIOBase::GetInstance()->RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
+						//Logger<VNetwork>::Send("`");
+
+						if (!m_RioFunctionTable.RIOReceive(context->clientSession_->requestQueue_, buf, 1, flags, context))
 						{
 							printf_s("[DEBUG] RIOReceive error: %d\n", GetLastError());
 
 							delete context;
-							return;
+							return -1;
 						}
 					}
 					else

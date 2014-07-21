@@ -41,6 +41,8 @@ namespace VCore
 			{
 				ClientSession* client = new ClientSession();
 				remainSsession_.push_back(client);
+
+				Logger<VSessionManager>::Info("Make new session");
 			}
 
 		}
