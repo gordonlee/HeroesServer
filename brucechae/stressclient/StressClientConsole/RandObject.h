@@ -1,5 +1,9 @@
 #pragma once
 
+#include <random>
+
+using namespace std;
+
 class Random
 {
 	random_device device_;

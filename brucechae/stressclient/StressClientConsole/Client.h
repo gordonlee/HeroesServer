@@ -39,7 +39,6 @@ class Client
 	int packetId_;
 	unordered_map<int, pair<char*, int>> memoryDataList_;
 
-	bool isConnected_;
 	bool toBeClose_;
 	bool exit_;
 
@@ -48,18 +47,14 @@ public:
 	~Client();
 
 	bool Run();
-	void Stop();
 	void Join();
-
-	bool IsConnected();
 
 private:
 	void Init();
 	void Update();
-	void Exit();
 
 	void Connect();
-	void Close();
+	void Close(bool reconnect = false, bool error = false);
 	void TryClose();
 
 	void Read();

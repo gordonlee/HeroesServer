@@ -1,5 +1,10 @@
 #pragma once
 
+#include <array>
+#include <stdarg.h>
+
+using namespace std;
+
 class Log
 {
 	static const int LOG_BUFFER_SIZE = 4096;

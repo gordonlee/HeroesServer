@@ -1,14 +1,15 @@
-#include "stdafx.h"
-
 #include "Client.h"
+#include "Application.h"
 #include "Log.h"
 #include "Packet.h"
 #include "RandObject.h"
-#include "StressClient.h"
 #include "TimeObject.h"
 
 namespace
 {
+	Application& theApp = Application::GetInstance();
+	const Config& config = theApp.GetConfig();
+
 	vector<string> sampleDatas = { 
 		"abcdefghijklmnopqrstuvwxyz",
 		"abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
@@ -31,7 +32,7 @@ namespace
 	};
 }
 
-Client::Client(int id) : id_(id), socket_(INVALID_SOCKET), workerThread_(nullptr), exit_(false)
+Client::Client(int id) : id_(id), workerThread_(nullptr)
 {
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -39,6 +40,12 @@ Client::Client(int id) : id_(id), socket_(INVALID_SOCKET), workerThread_(nullptr
 
 Client::~Client()
 {	
+	if (workerThread_ != nullptr)
+	{
+		delete workerThread_;
+		workerThread_ = nullptr;
+	}
+
 	WSACleanup();
 }
 
@@ -48,27 +55,11 @@ bool Client::Run()
 	{
 		workerThread_ = new std::thread([this]()
 		{
-			while (!exit_)
+			while (theApp.IsRun() && !exit_)
 			{
-				UInt64 start = Time::Now();
-
-				if (theApp.IsRun())
-				{
-					Update();
-				}
-
-				UInt64 end = Time::Now();
-				UInt64 during = (end - start);
-
-				if (during < 50)
-				{
-					UInt64 diff = 50 - during;
-					this_thread::sleep_for(Time::To(diff));
-				}
+				Update();
 			}
 		});
-
-		LOG("Client::Run - 클라이언트(%d) 시작\n", id_);
 
 		return true;
 	}
@@ -77,34 +68,31 @@ bool Client::Run()
 		LOG("%s\n", e.what());
 	}
 
-	LOG("Client::Run - 클라이언트(%d) 시작 실패\n", id_);
-
 	return false;
-}
-
-void Client::Stop()
-{
-	Exit();
 }
 
 void Client::Join()
 {
-	if (workerThread_ != nullptr)
-	{
-		if (workerThread_->joinable())
-		{
-			workerThread_->join();
-		}
+	UInt64 joinStart = Time::Now();
 
-		delete workerThread_;
-		workerThread_ = nullptr;
+	// 아직 응답 받지 못한 데이터가 있다면 최대 5초동안 기다린다
+	while (memoryDataList_.size() > 0 && Time::Now() - joinStart < 5000)
+	{
+		// 응답이 올때까지 수신 시도
+		Read();
+		Process();
+		this_thread::sleep_for(Time::To(1));
 	}
 
-	LOG("Client::Stop - 클라이언트(%d) 종료\n", id_);
+	if (workerThread_ != nullptr)
+	{
+		workerThread_->join();
+	}
 }
 
 void Client::Init()
 {
+	socket_ = INVALID_SOCKET;
 	ZeroMemory(recvBuffer_, BUFFER_SIZE);
 	ZeroMemory(sendBuffer_, BUFFER_SIZE);
 	recvOffset_ = 0;
@@ -119,12 +107,14 @@ void Client::Init()
 	errorCount_ = 0;
 	packetId_ = 0;
 	memoryDataList_.clear();
-	isConnected_ = false;
 	toBeClose_ = false;
+	exit_ = false;
 }
 
 void Client::Update()
 {
+	UInt64 start = Time::Now();
+
 	if (socket_ == INVALID_SOCKET)
 	{
 		Init();
@@ -138,21 +128,15 @@ void Client::Update()
 		Write();
 		Flush();
 	}
-}
 
-void Client::Exit()
-{
-	exit_ = true;
-}
+	UInt64 end = Time::Now();
+	UInt64 during = (end - start);
 
-bool Client::IsConnected()
-{
-	if (socket_ == INVALID_SOCKET)
+	if (during < 50)
 	{
-		return false;
+		UInt64 diff = 50 - during;
+		this_thread::sleep_for(Time::To(diff));
 	}
-
-	return isConnected_;
 }
 
 void Client::Connect()
@@ -171,20 +155,14 @@ void Client::Connect()
 
 	SOCKADDR_IN servAddr;
 	servAddr.sin_family = AF_INET;
-	servAddr.sin_addr.s_addr = inet_addr(theApp.GetConfig().serverIp_.c_str());
-	servAddr.sin_port = htons(theApp.GetConfig().serverPort_);
+	servAddr.sin_addr.s_addr = inet_addr(config.serverIp_.c_str());
+	servAddr.sin_port = htons(config.serverPort_);
 
 	if (connect(socket_, (SOCKADDR*)&servAddr, sizeof(servAddr)) == SOCKET_ERROR)
 	{
-		socket_ = INVALID_SOCKET;
-		LOG("Client::Stop - 클라이언트(%d) 접속 실패\n", id_);
+		Close();
 		return;
 	}
-
-	LOG("Client::Stop - 클라이언트(%d) 접속 성공\n", id_);
-
-	isConnected_ = true;
-	lastRecvTime_ = Time::Now();
 
 	// set buf size
 	int bufsize = BUFFER_SIZE;
@@ -194,20 +172,24 @@ void Client::Connect()
 	// set nonblocking
 	u_long arg = 1;
 	ioctlsocket(socket_, FIONBIO, &arg);
+
+	lastRecvTime_ = Time::Now();
 }
 
-void Client::Close()
+void Client::Close(bool reconnect, bool error)
 {
-	if (!IsConnected())
+	if (reconnect == false)
 	{
-		return;
+		exit_ = true;
+	}
+
+	if (error)
+	{
+		errorCount_++;
 	}
 
 	closesocket(socket_);
 	socket_ = INVALID_SOCKET;
-	isConnected_ = false;
-
-	LOG("Client::Stop - 클라이언트(%d) 접속 종료\n", id_);
 }
 
 void Client::TryClose()
@@ -218,12 +200,12 @@ void Client::TryClose()
 		Close();
 	}
 
-	if (theApp.GetConfig().closeProbPerFrame_ <= 0)
+	if (config.closeProbPerFrame_ <= 0)
 	{
 		return;
 	}
 
-	int prob = min(theApp.GetConfig().closeProbPerFrame_, 100);
+	int prob = min(config.closeProbPerFrame_, 100);
 	if (rand_.NextInt(((int)(10000 / prob)) - 1) == 0)
 	{
 		if (memoryDataList_.size() <= 0)
@@ -250,7 +232,7 @@ void Client::Read()
 	// recv timeout
 	if (diff >= 60000)
 	{
-		Close();
+		Close(true);
 		return;
 	}
 
@@ -264,9 +246,7 @@ void Client::Read()
 			return;
 		}
 
-		LOG("Client::Stop - 클라이언트(%d) recv 오류(%d)\n", id_, WSAGetLastError());
-
-		Close();
+		Close(true);
 		return;
 	}
 
@@ -297,19 +277,19 @@ void Client::Process()
 		Packet* packet = (Packet*)(recvBuf + offset);
 		if (!packet)
 		{
-			Close();
+			Close(true);
 			return;
 		}
 
 		if (packet->dataSize_ <= 0 || packet->dataSize_ > 65532)
 		{
-			Close();
+			Close(true);
 			return;
 		}
 
 		if (packet->checkSum_ != 0x55)
 		{
-			Close();
+			Close(true);
 			return;
 		}
 
@@ -340,7 +320,7 @@ void Client::ProcessPacket(char* buf, int len)
 	PacketData* data = (PacketData*)buf;
 	if (!data)
 	{
-		Close();
+		Close(true);
 		return;
 	}
 
@@ -348,7 +328,7 @@ void Client::ProcessPacket(char* buf, int len)
 	int responseTime = (int)(now - data->sentTime_);
 	if (data->sentTime_ <= 0 && responseTime <= 0)
 	{
-		Close();
+		Close(true);
 		return;
 	}
 
@@ -357,7 +337,7 @@ void Client::ProcessPacket(char* buf, int len)
 	{
 		if (memoryDataList_.count(data->packetId_) <= 0)
 		{
-			Close();
+			Close(true);
 			return;
 		}
 
@@ -365,7 +345,7 @@ void Client::ProcessPacket(char* buf, int len)
 		auto pair = memoryDataList_[data->packetId_];
 		if (pair.first == nullptr)
 		{
-			Close();
+			Close(true);
 			return;
 		}
 
@@ -404,7 +384,7 @@ void Client::Write()
 		return;
 	}
 
-	int sendInterval = 1000 / theApp.GetConfig().sendCountPerSecond_;
+	int sendInterval = 1000 / config.sendCountPerSecond_;
 
 	UInt64 now = Time::Now();
 	UInt64 diff = now - lastSendTime_;
@@ -422,7 +402,7 @@ void Client::Write()
 	while (true)
 	{
 		index = rand_.NextInt(sampleDatas.size() - 1);
-		if ((int)sampleDatas[index].size() < theApp.GetConfig().sendPacketSizeMax_)
+		if ((int)sampleDatas[index].size() < config.sendPacketSizeMax_)
 		{
 			break;
 		}
@@ -445,7 +425,7 @@ void Client::Write()
 	
 	// 패킷 헤더
 	packet.dataSize_ = dataSize;
-	packet.flag_ = theApp.GetConfig().broadcast_ ? 0x02 : 0x01;
+	packet.flag_ = config.broadcast_ ? 0x02 : 0x01;
 	packet.checkSum_ = 0x55;
 
 	// 전체 패킷 길이
@@ -474,13 +454,13 @@ void Client::WritePacket(char* buf, int len)
 {
 	if (!buf || len <= 0)
 	{
-		Close();
+		Close(true);
 		return;
 	}
 
 	if (sendLength_ + len > BUFFER_SIZE)
 	{
-		Close();
+		Close(true);
 		return;
 	}
 
@@ -515,9 +495,7 @@ void Client::Flush()
 			return;
 		}
 
-		LOG("Client::Stop - 클라이언트(%d) send 오류(%d)\n", id_, WSAGetLastError());
-
-		Close();
+		Close(true);
 		return;
 	}
 
@@ -534,8 +512,7 @@ namespace
 {
 	Int64 GetResponseTimeAvg(const pair<Int64, int>& responseTimes)
 	{
-		auto localCopy = responseTimes;
-		Int64 avg = localCopy.second > 0 ? (Int64)(localCopy.first / (Int64)localCopy.second) : 0;
+		Int64 avg = responseTimes.second > 0 ? (Int64)(responseTimes.first / (Int64)responseTimes.second) : 0;
 		return avg;
 	}
 }

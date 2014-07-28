@@ -3,6 +3,7 @@
 #include "Log.h"
 #include "TimeObject.h"
 
+#include <Windows.h>
 #include <algorithm>
 #include <conio.h>
 #include <iostream>
