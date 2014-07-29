@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<config>
+	<server_name>SBServer</server_name>
+	<server_version>1.0.0</server_version>
+	<server_port>9000</server_port>
+	<server_tick_interval>1000</server_tick_interval>
+	
+	<bug_trap_server_ip>127.0.0.1</bug_trap_server_ip>
+	<bug_trap_server_port>9999</bug_trap_server_port>
+	
+	<object_monitor_interval>10000</object_monitor_interval>
+	<profiler_report_interval>10000</profiler_report_interval>
+	
+	<worker_thread_count>4</worker_thread_count>
+	<logic_thread_count>1</logic_thread_count>
+	<timer_thread_count>4</timer_thread_count>
+	
+	<socket_idle_timeout>50000</socket_idle_timeout>
+	
+	<send_buffer_queue_max_count>5</send_buffer_queue_max_count>
+	<send_would_block_limit_count>5</send_would_block_limit_count>
+</config>

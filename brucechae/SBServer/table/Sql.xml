@@ -1,0 +1,3 @@
+﻿<sql>
+	<db name ="game" ip="10.11.26.26" port="1433" dsn="mco_internal_test" threads="4" account="gamedb" password="!nfislxl" />
+</sql>

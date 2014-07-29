@@ -64,5 +64,5 @@ public:
 
 private:
 	bool IsValidIp(string& ip);
-	int runningTime_;
+	bool IsValidHostName(string& ip);
 };

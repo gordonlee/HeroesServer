@@ -38,6 +38,7 @@ struct Status
 	Int64 recvOtherPacketCount_;
 	Int64 recvOtherPacketResponseTimeAvg_;
 	Int64 recvDiffPacketCount_;
+	int runningTime_;
 
 	Status()
 	{
@@ -53,6 +54,7 @@ struct Status
 		recvOtherPacketCount_ = 0;
 		recvOtherPacketResponseTimeAvg_ = 0;
 		recvDiffPacketCount_ = 0;
+		runningTime_ = 0;
 	}
 };
 

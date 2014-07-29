@@ -288,6 +288,12 @@ void CStressClientDlg::OnBnClickedButton1()
 	int sendPacketSizeMax = _ttoi(stringSendPacketSizeMax_);
 	int closeProbPerFrame = _ttoi(stringCloseProbPerFrame_);
 
+	if (!IsValidIp(serverIp) && !IsValidHostName(serverIp))
+	{
+		MessageBox(_T("서버 IP 오류"));
+		return;
+	}
+
 	stringServerIp_ = serverIp.c_str();
 
 	if (serverPort > 65536)
@@ -340,8 +346,6 @@ void CStressClientDlg::OnBnClickedButton1()
 	buttonStop_.EnableWindow(TRUE);
 
 	UpdateData(FALSE);
-
-	runningTime_ = 0;
 
 	theApp.GetConfig().serverIp_ = serverIp;
 	theApp.GetConfig().serverPort_ = serverPort;
@@ -441,7 +445,7 @@ void CStressClientDlg::OnTimer(UINT_PTR nIDEvent)
 		}
 		else if (nIDEvent == 2)
 		{
-			int currentTime = ++runningTime_;
+			int currentTime = ++theApp.GetStatus().runningTime_;
 			int hour = currentTime / 3600;
 			currentTime = currentTime % 3600;
 			int minute = currentTime / 60;
@@ -476,4 +480,80 @@ void CStressClientDlg::OnDestroy()
 
 	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
 	//FreeConsole();
+}
+
+bool CStressClientDlg::IsValidIp(string& ip)
+{
+	string addr[4];
+	string fixedIP;
+
+	string input = ip;
+	int dotCount = 0;
+
+	while (dotCount < 3)
+	{
+		size_t index = input.find_first_of(".");
+		if (index == input.npos)
+		{
+			return false;
+		}
+
+		addr[dotCount] = input.substr(0, index);
+		input = input.substr(index + 1, input.size() - index + 1);
+		dotCount++;
+	}
+
+	addr[dotCount] = input;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if (addr[i].size() <= 0 || addr[i].size() > 3)
+		{
+			return false;
+		}
+
+		if (!all_of(addr[i].begin(), addr[i].end(), ::isdigit))
+		{
+			return false;
+		}
+
+		int num = atoi(addr[i].c_str());
+		if (num < 0 && num > 255)
+		{
+			return false;
+		}
+
+		if (i > 0)
+		{
+			fixedIP += ".";
+		}
+
+		fixedIP += to_string(num);
+	}
+
+	ip = fixedIP;
+
+	return true;
+}
+
+bool CStressClientDlg::IsValidHostName(string& ip)
+{
+	bool success = false;
+
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
+
+	PHOSTENT hostinfo = gethostbyname(ip.c_str());
+	if (hostinfo != NULL)
+	{
+		for (int i = 0; hostinfo->h_addr_list[i] != 0; i++)
+		{
+			ip = inet_ntoa((*(struct in_addr*)hostinfo->h_addr_list[i]));
+			success = true;
+			break;
+		}
+	}
+
+	WSACleanup();
+	return success;
 }
