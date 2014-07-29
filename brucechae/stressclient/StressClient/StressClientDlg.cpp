@@ -244,18 +244,49 @@ void CStressClientDlg::OnBnClickedButton1()
 	UpdateData(TRUE);
 
 	wstring_convert<codecvt_utf8<wchar_t>> conv;
+
+	if (stringServerIp_.GetLength() <= 0)
+	{
+		MessageBox(_T("서버 IP를 입력해주세요."));
+		return;
+	}
+
+	if (stringServerPort_.GetLength() <= 0)
+	{
+		MessageBox(_T("서버 Port를 입력해주세요."));
+		return;
+	}
+
+	if (stringClientCountMax_.GetLength() <= 0)
+	{
+		MessageBox(_T("최대 클라이언트 수를 입력해주세요."));
+		return;
+	}
+
+	if (stringSendCountPerSecond_.GetLength() <= 0)
+	{
+		MessageBox(_T("초당 송신 횟수를 입력해주세요."));
+		return;
+	}
+
+	if (stringSendPacketSizeMax_.GetLength() <= 0)
+	{
+		MessageBox(_T("송신 패킷 크기 최대를 입력해주세요."));
+		return;
+	}
+
+	if (stringCloseProbPerFrame_.GetLength() <= 0)
+	{
+		MessageBox(_T("접속 종료 확률을 입력해주세요."));
+		return;
+	}
+
 	string serverIp = conv.to_bytes(stringServerIp_.GetBuffer());
 	int serverPort = _ttoi(stringServerPort_);
 	int clientCountMax = _ttoi(stringClientCountMax_);
 	int sendCountPerSecond = _ttoi(stringSendCountPerSecond_);
 	int sendPacketSizeMax = _ttoi(stringSendPacketSizeMax_);
 	int closeProbPerFrame = _ttoi(stringCloseProbPerFrame_);
-
-	if (!IsValidIp(serverIp))
-	{
-		MessageBox(_T("서버 IP 오류"));
-		return;
-	}
 
 	stringServerIp_ = serverIp.c_str();
 
@@ -310,7 +341,7 @@ void CStressClientDlg::OnBnClickedButton1()
 
 	UpdateData(FALSE);
 
-	runningTime_ = 58;
+	runningTime_ = 0;
 
 	theApp.GetConfig().serverIp_ = serverIp;
 	theApp.GetConfig().serverPort_ = serverPort;
@@ -438,61 +469,6 @@ void CStressClientDlg::OnTimer(UINT_PTR nIDEvent)
 
 	CDialogEx::OnTimer(nIDEvent);
 }
-
-bool CStressClientDlg::IsValidIp(string& ip)
-{
-	string addr[4];
-	string fixedIP;
-
-	string input = ip;
-	int dotCount = 0;
-
-	while (dotCount < 3)
-	{
-		size_t index = input.find_first_of(".");
-		if (index == input.npos)
-		{
-			return false;
-		}
-
-		addr[dotCount] = input.substr(0, index);
-		input = input.substr(index + 1, input.size() - index + 1);
-		dotCount++;
-	}
-
-	addr[dotCount] = input;
-
-	for (int i = 0; i < 4; i++)
-	{
-		if (addr[i].size() <= 0 || addr[i].size() > 3)
-		{
-			return false;
-		}
-
-		if (!all_of(addr[i].begin(), addr[i].end(), ::isdigit))
-		{
-			return false;
-		}
-
-		int num = atoi(addr[i].c_str());
-		if (num < 0 && num > 255)
-		{
-			return false;
-		}
-
-		if (i > 0)
-		{
-			fixedIP += ".";
-		}
-
-		fixedIP += to_string(num);
-	}
-
-	ip = fixedIP;
-	
-	return true;
-}
-
 
 void CStressClientDlg::OnDestroy()
 {
