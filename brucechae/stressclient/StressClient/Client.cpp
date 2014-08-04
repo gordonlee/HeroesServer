@@ -215,6 +215,7 @@ void Client::TryClose()
 	// 종료되어야 한다
 	if (toBeClose_ && memoryDataList_.size() <= 0)
 	{
+        LOG("CloseCase - toBeClose is on.\n");
 		Close();
 	}
 
@@ -250,6 +251,7 @@ void Client::Read()
 	// recv timeout
 	if (diff >= 60000)
 	{
+        LOG("CloseCase - Receive timeout.\n");
 		Close();
 		return;
 	}
@@ -303,12 +305,20 @@ void Client::Process()
 
 		if (packet->dataSize_ <= 0 || packet->dataSize_ > 65532)
 		{
+            if (packet->dataSize_ <= 0) {
+                LOG("CloseCase - packet->dataSize is less than zero. [%d]\n", packet->dataSize_);
+            }
+            else {
+                LOG("CloseCase - packet->dataSize is more than 65532.\n");
+            }
+
 			Close();
 			return;
 		}
 
 		if (packet->checkSum_ != 0x55)
-		{
+        {
+            LOG("CloseCase - checksum failed.\n");
 			Close();
 			return;
 		}
