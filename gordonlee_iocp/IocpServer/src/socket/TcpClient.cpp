@@ -1,7 +1,11 @@
 
 #include "./TcpClient.h"
+#include "./TcpSessionManager.h"
 
+#include "packet/Packet.h"
 #include "utility/buffer.h"
+#include "utility/AutoLock.h"
+#include "iocp/iocp_structure.h"
 
 TcpClient::TcpClient(void) 
 : m_Socket(0)
@@ -9,18 +13,29 @@ TcpClient::TcpClient(void)
 , m_pRecvBuffer(NULL)
 , m_pSendBuffer(NULL)
 , m_RecvBytes(0)
-, m_SendBytes(0) {
-    
-    ::memset(&m_SocketAddr, 0, sizeof(m_SocketAddr));
+, m_SendBytes(0)
+, m_RecvIoState(IO_NOT_CONNECTED)
+, m_SendIoState(IO_NOT_CONNECTED)
+, m_isClosing(false)
+, m_pRecvOverlapped(NULL) {
+	::memset(&m_SocketAddr, 0, sizeof(m_SocketAddr));
+
+	m_pSendLock = new CriticalSectionLock();
+
     CreateBuffers();
 }
 
 TcpClient::~TcpClient(void) {
     RemoveBuffers();
+	
+	if (m_pSendLock) {
+		delete m_pSendLock;
+	}
 }
 
 int TcpClient::Initialize(void) {
     m_Socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    m_RecvIoState = IO_CONNECTED;
     return 0;
 }
 
@@ -34,12 +49,35 @@ int TcpClient::Initialize(const SOCKET _socket, const SOCKADDR_IN& _addr, const 
     return 0;
 }
 
-int TcpClient::SendAsync(void) {
+void TcpClient::BindRecvOverlapped(OverlappedIO* _overlapped) {
+	m_pRecvOverlapped = _overlapped;
+    m_pRecvOverlapped->SetClientObject(this);
+}
+
+int TcpClient::SendAsync(byte* _buffer, int _sendBytes) {
+	if (m_SendIoState == IO_PENDING) {
+		// write buffer and finish. 
+		int writtenBytes = m_pSendBuffer->Write(_buffer, _sendBytes);
+		if (writtenBytes != _sendBytes) {
+			return -1;
+		}
+	}
+	else {
+		m_SendIoState = IO_PENDING;
+		// write buffer
+
+		// call WSASend()
+
+	}
+
+	
 	return 0;
 }
 
 int TcpClient::Send(byte* _buffer, int _sendBytes) {
-    m_IoState = IO_SENDING;
+	AutoLock autoLockInstance(m_pSendLock);
+
+	m_SendIoState = IO_PENDING;
 
     int writtenBytes = m_pSendBuffer->Write(_buffer, _sendBytes);
     if (writtenBytes != _sendBytes) {
@@ -49,31 +87,63 @@ int TcpClient::Send(byte* _buffer, int _sendBytes) {
     return ::send(m_Socket, m_pSendBuffer->GetPtr(), m_pSendBuffer->GetLength(), 0);
 }
 
-int TcpClient::Send(Buffer* _buffer, int _sendBytes) {
-    m_IoState = IO_SENDING;
+int TcpClient::EnqueueSendBuffer(byte* _buffer, int _sendBytes) {
+    AutoLock autoLockInstance(m_pSendLock);
+
+    m_SendIoState = IO_PENDING;
+
+    int writtenBytes = m_pSendBuffer->Write(_buffer, _sendBytes);
+    if (writtenBytes != _sendBytes) {
+        return -1;
+    }
+    return writtenBytes;
+}
+
+int TcpClient::FlushSendBuffer() {
+    AutoLock autoLockInstance(m_pSendLock);
+
+    if (m_pSendBuffer->GetLength() > 0) {
+        return ::send(m_Socket, m_pSendBuffer->GetPtr(), m_pSendBuffer->GetLength(), 0);
+    }
+    return 0;
+}
+
+int TcpClient::Send(IBuffer* _buffer, int _sendBytes) {
+	AutoLock autoLockInstance(m_pSendLock);
+
+	m_SendIoState = IO_PENDING;
 	if (_buffer && _sendBytes > 0) {
         return ::send(m_Socket, _buffer->GetPtr(), _sendBytes, 0);
 	}
 	return -1;
 }
 
-int TcpClient::RecvAsync(const LPOVERLAPPED _overlapped) {
-    m_IoState = IO_READING;
+int TcpClient::RecvAsync(void) {
+    //printf("StartPending [Client: %X, Overlapped: %X]\n", this, m_pRecvOverlapped);
+
+    if (GetRecvIoState() != IO_CONNECTED) {
+        printf("RecvAsync.m_RecvIoState is not IO_CONNECTED. Check threading synchronization.\n");
+    }
+
+    m_RecvIoState = IO_PENDING;
 
 	DWORD recvBytes;
 	DWORD flags = 0;
-	
-    WSABUF wsaBuf;
-	wsaBuf.buf = m_pRecvBuffer->GetPtr();
-	wsaBuf.len = BUFFER_SIZE;
 
-	int result = ::WSARecv(
+	WSABUF wsaBuf;
+	wsaBuf.buf = m_pRecvBuffer->GetEmptyPtr();
+	wsaBuf.len = m_pRecvBuffer->GetEmptyLength();
+
+	m_pRecvOverlapped->Reset();
+
+    
+    int result = ::WSARecv(
 		m_Socket,
 		&wsaBuf,
 		1,
 		&recvBytes,
 		&flags,
-		_overlapped,
+		m_pRecvOverlapped,
 		NULL);
 
 	if (result == SOCKET_ERROR){
@@ -85,67 +155,196 @@ int TcpClient::RecvAsync(const LPOVERLAPPED _overlapped) {
 }
 
 void TcpClient::Close(bool isForce) {
-	::closesocket(m_Socket);
+    //RemoveBuffers();
+	//::closesocket(m_Socket);
+    m_isClosing = true;
 }
 
 const SOCKET TcpClient::GetSocket() const {
 	return m_Socket;
 }
 
-const Buffer* TcpClient::GetRecvBuffer() {
+const IBuffer* TcpClient::GetRecvBuffer() {
     return m_pRecvBuffer;
 }
 
-const Buffer* TcpClient::GetSendBuffer() {
-    return m_pSendBuffer;
+const IO_STATE TcpClient::GetRecvIoState() const {
+    return m_RecvIoState;
 }
 
-const IO_STATE TcpClient::GetIoState() const {
-    return m_IoState;
-}
 //// handling events
-// FIXME: packet process flow
-const int packet_header_length = 2; 
+const int packet_length_header = 2; 
 void TcpClient::OnReceived(unsigned long transferred) {
     m_RecvBytes += transferred;
+	m_pRecvBuffer->ForceAddLength(transferred);
     
+    m_RecvIoState = IO_CONNECTED;
+
+	/*
     printf("[%s:%d] RecvData : %s\n",
         inet_ntoa(m_SocketAddr.sin_addr),
         ntohs(m_SocketAddr.sin_port),
         m_pRecvBuffer->GetPtr());
+	*/
 
-    // process pakcet
-    int transferredSendData = Send(reinterpret_cast<byte*>(m_pRecvBuffer->GetPtr()), m_RecvBytes);
-    if (transferredSendData < 0) {
-        Close(true);
-        return;
+	TryProcessPacket();
+}
+
+const int packet_header_size = sizeof(PacketHeader);
+
+void TcpClient::TryProcessPacket() {
+	if (m_pRecvBuffer->GetLength() < packet_length_header) {
+		return;
+	}
+	
+	// process packet
+	Packet* packetPointer = reinterpret_cast<Packet *>(m_pRecvBuffer->GetPtr());
+
+	while (packetPointer->dataSize_ > 0 &&
+        m_pRecvBuffer->GetLength() >= packetPointer->dataSize_ + packet_header_size)
+	{
+		byte packet[BUFFER_SIZE] = { 0, };
+		::memset(packet, 0, BUFFER_SIZE);
+
+        int readBytes = m_pRecvBuffer->Read(packetPointer->dataSize_ + packet_header_size, (char*)packet, BUFFER_SIZE);
+
+        m_RecvBytes -= readBytes;
+
+		ProcessPacket((Packet*)packet);
+
+        if (m_pRecvBuffer != NULL && 
+            m_pRecvBuffer->GetLength() > packet_length_header) {
+            Packet* packetPointer = reinterpret_cast<Packet *>(m_pRecvBuffer->GetPtr());
+		}
+		else {
+			break;
+		}
+	}
+    int sendbytes = FlushSendBuffer();
+    OnSend(sendbytes);
+}
+
+void TcpClient::ProcessPacket(Packet* packet) {
+
+	/// Verify CheckSum
+	if (packet->checkSum_ == 0x55) {
+
+	}
+	else {
+		// Unknown checksum
+		Close(true);
+	}
+
+	/// Verify Flag
+	if (packet->flag_ == 0x01) {	// send as echo
+		PacketData* dataSection = (PacketData*)packet->data_;
+        /*
+		printf("[%s:%d] ProcessPacket [%d:%d:%d][%d:%d:%d][%s]\n",
+			inet_ntoa(m_SocketAddr.sin_addr),
+			ntohs(m_SocketAddr.sin_port),
+			packet->dataSize_,
+			packet->flag_, 
+			packet->checkSum_,
+			dataSection->packetId_,
+			dataSection->clientId_,
+			dataSection->sentTime_,
+			dataSection->data_);
+        
+		printf("[%s:%d] ProcessPacket [%d:%d:%d][%d:%d:%d]\n",
+			inet_ntoa(m_SocketAddr.sin_addr),
+			ntohs(m_SocketAddr.sin_port),
+			packet->dataSize_,
+			packet->flag_,
+			packet->checkSum_,
+			dataSection->packetId_,
+			dataSection->clientId_,
+			dataSection->sentTime_);
+		*/
+        /*
+		int transferredSendData = Send(
+			reinterpret_cast<byte*>(packet), 
+			packet->dataSize_ + packet_header_size);
+            */
+        int transferredSendData = EnqueueSendBuffer(
+            reinterpret_cast<byte*>(packet),
+            packet->dataSize_ + packet_header_size);
+		if (transferredSendData < 0) {
+            if (transferredSendData == SOCKET_ERROR) {
+                printf("send failed with error: %d\n", WSAGetLastError());
+            }
+			Close(true);
+			return;
+		}
+		// OnSend(transferredSendData);
+	}
+	else if (packet->flag_ == 0x02) { // send as broadcast to all sessions
+		for (auto& client : TcpSessionManager.GetWholeClients()) {
+			if (client != NULL && client->IsValid()) {
+				/*int transferredSendData = Send(
+					reinterpret_cast<byte*>(packet), 
+					packet->dataSize_ + packet_header_size);
+				if (transferredSendData < 0) {
+					Close(true);
+					return;
+				}
+                */
+                int transferredSendData = client->EnqueueSendBuffer(
+                    reinterpret_cast<byte*>(packet),
+                    packet->dataSize_ + packet_header_size);
+                if (transferredSendData < 0) {
+                    if (transferredSendData == SOCKET_ERROR) {
+                        printf("send failed with error: %d\n", WSAGetLastError());
+                    }
+                    Close(true);
+                    return;
+                }
+
+                int sendbytes = client->FlushSendBuffer();
+                client->OnSend(sendbytes);
+			}
+		}
+        
+	}
+	else {
+		// Unknown flag
+		Close(true);
+	}
+}
+
+bool TcpClient::IsValid(void) const {
+    AutoLock autoLockInstance(m_pSendLock);
+
+    // TODO: varify valid
+    if (m_isClosing) {
+        return false;
     }
-    OnSend(transferredSendData);
-
-    // TODO: 아래 두 변수 가능하면 나중에 묶을 것.
-    m_pRecvBuffer->Clear();
-    m_RecvBytes = 0;
-
-    m_IoState = IO_CONNECTED;
+	return true;
 }
 
 void TcpClient::OnSend(unsigned long transferred) {
-    m_IoState = IO_CONNECTED;
-    
+	AutoLock autoLockInstance(m_pSendLock);
+
+    m_SendIoState = IO_CONNECTED;
     m_pSendBuffer->Clear();
-    m_RecvBytes = 0;
 }
 
 
 //// private functions
-void TcpClient::CreateBuffers(void) {
+bool TcpClient::CreateBuffers(void) {
     if (m_pRecvBuffer || m_pSendBuffer) {
         RemoveBuffers();
     }
 
-    // TODO: error handling, when allocation would be failed.
-    m_pRecvBuffer = new Buffer();
-    m_pSendBuffer = new Buffer();
+	m_pRecvBuffer = BufferFactory::CreateBuffer(PULLED_BUFFER);
+	if (m_pRecvBuffer == NULL) {
+		return false;
+	}
+	m_pSendBuffer = BufferFactory::CreateBuffer(PULLED_BUFFER);
+	if (m_pSendBuffer == NULL) {
+		return false;
+	}
+
+	return true;
 }
 
 void TcpClient::RemoveBuffers(void) {

@@ -2,15 +2,18 @@
 #pragma once
 
 #include "common_header/base_header.h"
+#include "iocp/iocp_structure.h"
+
 
 enum IO_STATE {
     IO_NOT_CONNECTED = 0,
     IO_CONNECTED,
-    IO_READING,
-    IO_SENDING,
+    IO_PENDING,
 };
 
-class Buffer;
+struct Packet;
+class IBuffer;
+class ILock;
 
 class TcpClient {
 public:
@@ -19,20 +22,26 @@ public:
 
     int Initialize(void);
 	int Initialize(const SOCKET _socket, const SOCKADDR_IN& _addr, const int _addrLen);
-	
-	int SendAsync(void);
-    int Send(byte* _buffer, int _sendBytes);
-	int Send(Buffer* _buffer, int _sendBytes);
 
-	int RecvAsync(const LPOVERLAPPED _overlapped);
+	void BindRecvOverlapped(OverlappedIO* _overlapped);
+	
+	bool IsValid(void) const;
+
+	int SendAsync(byte* _buffer, int _sendBytes);
+    int Send(byte* _buffer, int _sendBytes);
+    int EnqueueSendBuffer(byte* _buffer, int _sendBytes);
+    int FlushSendBuffer();
+	int Send(IBuffer* _buffer, int _sendBytes);
+
+	int RecvAsync(void);
+	void TryProcessPacket();
 	
 	void Close(bool isForce);
 
 public:
     const SOCKET GetSocket() const ;
-    const Buffer* GetRecvBuffer();
-    const Buffer* GetSendBuffer();
-    const IO_STATE GetIoState() const ;
+	const IBuffer* GetRecvBuffer();
+    const IO_STATE GetRecvIoState() const ;
 
     // handling events
  public:
@@ -40,19 +49,26 @@ public:
      void OnSend(unsigned long transferred);
 
  private:
-     void CreateBuffers(void);
+     bool CreateBuffers(void);
      void RemoveBuffers(void);
+	 void ProcessPacket(Packet* packet);
 
  private:
 	SOCKET m_Socket;
 	SOCKADDR_IN m_SocketAddr;
 	bool m_IsSetupAddr;
-    IO_STATE m_IoState;
-    
-    // MEMO: input from async WorkerThread, output to OnReceived events
-    Buffer* m_pRecvBuffer;
-    Buffer* m_pSendBuffer;
+    bool m_isClosing;
 
-    unsigned long m_RecvBytes;
-    unsigned long m_SendBytes;
+    // MEMO: input from async WorkerThread, output to OnReceived events
+	OverlappedIO* m_pRecvOverlapped;
+	IO_STATE m_RecvIoState;
+	IBuffer* m_pRecvBuffer;
+    int m_RecvBytes;
+
+	// MEMO: send operation needs thread safe mode.
+	IO_STATE m_SendIoState;
+	IBuffer* m_pSendBuffer;
+	int m_SendBytes;
+	ILock* m_pSendLock;
+	
 };
