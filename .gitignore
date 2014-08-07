@@ -9,7 +9,6 @@
 # Build results
 
 [Dd]ebug/
-[Rr]elease/
 x64/
 build/
 [Oo]bj/
@@ -22,6 +21,8 @@ _intermediate/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
+*.tlog
+*.idb
 *_i.c
 *_p.c
 *.ilk
