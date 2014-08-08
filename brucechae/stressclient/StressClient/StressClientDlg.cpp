@@ -364,7 +364,6 @@ void CStressClientDlg::OnBnClickedButton1()
 	}
 
 	theApp.GetStatus().Init();
-	theApp.GetStatus().runningTime_ = 0;
 	theApp.SetRun(true);
 }
 
