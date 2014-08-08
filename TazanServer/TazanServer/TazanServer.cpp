@@ -62,6 +62,20 @@ public:
 		{
 			if (!ec)
 			{
+				boost::asio::socket_base::bytes_readable c(true);
+				socket_.io_control(c);
+				// printf("Current readable bytes : %d\n", c.get());
+				if (c.get() >= 8192/* socket receive buffer*/)
+				{
+					EnterCriticalSection(&cs);
+					sessions.erase(shared_from_this());
+					LeaveCriticalSection(&cs);
+
+					printf("Session is disconnected Count : %d\n", sessions.size());
+					printf("Receive Buffer is Overflow!!\n");
+
+					return;
+				}
 				// Success Read
 				current_length += length;
 
@@ -116,7 +130,7 @@ public:
 				sessions.erase(shared_from_this());
 				LeaveCriticalSection(&cs);
 
-				printf("Session Count : %d Disconnect\n", sessions.size());
+				printf("Session is disconnected Count : %d\n", sessions.size());
 				printf("End Of File\n", ec.message().c_str());
 			}
 			else if (ec == boost::asio::error::operation_aborted ||
@@ -126,7 +140,7 @@ public:
 				sessions.erase(shared_from_this());
 				LeaveCriticalSection(&cs);
 
-				printf("Session Count : %d Disconnect\n", sessions.size());
+				printf("Session is disconnected Count : %d\n", sessions.size());
 				printf("Client disconnect to server.\n");
 			}
 			else
@@ -135,8 +149,8 @@ public:
 				sessions.erase(shared_from_this());
 				LeaveCriticalSection(&cs);
 
-				printf("Session Count : %d Disconnect\n", sessions.size());
-				printf("Error Code : %s\n", ec.message().c_str());
+				printf("Session is disconnected Count : %d\n", sessions.size());
+				printf("Unknown Error : %s\n", ec.message().c_str());
 			}
 		});
 	}
@@ -179,6 +193,9 @@ public:
 		: acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
 		socket_(io_service)
 	{
+		boost::asio::ip::tcp::no_delay option_nodelay(true);
+		acceptor_.set_option(option_nodelay);
+
 		do_accept();
 	}
 
@@ -193,16 +210,8 @@ private:
 				boost::asio::ip::tcp::no_delay option_nodelay(true);
 				socket_.set_option(option_nodelay);
 
-				/*boost::asio::socket_base::send_buffer_size option_sendbuffersize(8192 * 10);
-				boost::asio::socket_base::receive_buffer_size option_recvbuffersize(8192 * 10);
-				socket_.set_option(option_sendbuffersize);
-				socket_.set_option(option_recvbuffersize);*/
-
 				EnterCriticalSection(&cs);
 				std::make_shared<session>(std::move(socket_))->start();
-				/*boost::shared_ptr<session> entity = boost::shared_ptr<session>(new session(socket_));
-				entity->start();
-				sessions.insert(entity);*/
 				LeaveCriticalSection(&cs);
 
 				printf("Session Count : %d Accept\n", sessions.size());
