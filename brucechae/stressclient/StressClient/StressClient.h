@@ -54,7 +54,6 @@ struct Status
 		recvOtherPacketCount_ = 0;
 		recvOtherPacketResponseTimeAvg_ = 0;
 		recvDiffPacketCount_ = 0;
-		runningTime_ = 0;
 	}
 };
 

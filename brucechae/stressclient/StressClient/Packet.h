@@ -28,7 +28,7 @@ struct PacketData
 {
 	int packetId_;
 	int clientId_;
-	int sentTime_;
+	Int64 sentTime_;
 	char data_[65528];
 };
 #pragma pack()
