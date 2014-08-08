@@ -6,7 +6,11 @@
 #include <boost/asio.hpp>
 
 #include <windows/gperftools/tcmalloc.h>
+#ifdef _DEBUG
+#pragma comment(lib, "libtcmalloc_minimal-debug.lib")
+#else
 #pragma comment(lib, "libtcmalloc_minimal.lib")
+#endif
 
 using boost::asio::ip::tcp;
 
