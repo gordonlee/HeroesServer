@@ -364,6 +364,7 @@ void CStressClientDlg::OnBnClickedButton1()
 	}
 
 	theApp.GetStatus().Init();
+	theApp.GetStatus().runningTime_ = 0;
 	theApp.SetRun(true);
 }
 
@@ -391,6 +392,7 @@ void CStressClientDlg::OnBnClickedButton2()
 
 	theApp.GetClients().clear();
 	theApp.GetStatus().Init();
+	theApp.GetStatus().runningTime_ = 0;
 
 	editServerIp_.EnableWindow(TRUE);
 	editServerPort_.EnableWindow(TRUE);
