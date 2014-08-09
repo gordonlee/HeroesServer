@@ -12,6 +12,15 @@
     <Filter Include="Buffer">
       <UniqueIdentifier>{2f00961f-675b-4ba0-a8cc-6dccf0beae90}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Entity">
+      <UniqueIdentifier>{721056a7-3aa9-4b9c-a95e-49d98ca20ecd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Lock">
+      <UniqueIdentifier>{e19ecaeb-643e-41c0-9730-fad66a3e4713}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TSQueue">
+      <UniqueIdentifier>{be441628-f490-4bd6-976a-c0757a88c486}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -23,13 +32,29 @@
     <ClInclude Include="targetver.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="Entity.h">
+      <Filter>Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="TazanServer.h">
+      <Filter>TazanServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Lock.h">
+      <Filter>Lock</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>TazanServer</Filter>
-    </ClCompile>
     <ClCompile Include="TazanServer.cpp">
       <Filter>TazanServer</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Entity.cpp">
+      <Filter>Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Lock.cpp">
+      <Filter>Lock</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
