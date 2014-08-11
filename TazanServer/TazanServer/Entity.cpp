@@ -3,14 +3,9 @@
 #include "Entity.h"
 
 #include "TazanServer.h"
+#include "Packet.h"
 
-struct packet_header
-{
-	unsigned short data_size;
-	unsigned char flag;
-	unsigned char checksum;
-	char* datas;
-};
+#include "EchoPacket.h"
 
 Entity::Entity(tcp::socket& socket)
 : EntitySocket(std::move(socket)),
@@ -59,51 +54,13 @@ void Entity::DoRead()
 			// Success Read
 			CurrentReadLength += length;
 
-			packet_header* ph = (packet_header*)EntityReadBuffer;
-			if (ph->data_size + 4 <= CurrentReadLength)
+			PacketHeader* packetHeader = (PacketHeader*)EntityReadBuffer;
+			if (packetHeader->dataSize + 4 <= CurrentReadLength)
 			{
-				if (ph->checksum == 0x55)
-				{
-					short ref_count = 0;
-					char* buf = NULL;
-					{
-						Lock lock(MyTazan->GetLockSource());
-						buf = (char*)tc_malloc(ph->data_size + 6);
-					}
-					memcpy(buf + 2, EntityReadBuffer, ph->data_size + 4);
+				HandlePacket(packetHeader, ((Entity*)this), MyTazan);
 
-					if (ph->flag == 1)
-					{
-						ref_count = 1;
-						memcpy(buf, (void*)&ref_count, 2);
-
-						DoWrite(buf, ph->data_size + 4);
-					}
-					else if (ph->flag == 2)
-					{
-						std::set<std::shared_ptr<Entity>> Entities = MyTazan->GetEntities();
-						ref_count = Entities.size();
-						memcpy(buf, (void*)&ref_count, 2);
-						
-						for (auto& it : Entities)
-						{
-							it->DoWrite(buf, ph->data_size + 4);
-						}
-						/*parallel_for_each(Entities.begin(), Entities.end(), [buf, ph](const std::shared_ptr<Entity>& it)
-						{
-							it->DoWrite(buf, ph->data_size + 4);
-						});*/
-					}
-					else
-					{
-					}
-
-					CurrentReadLength -= ph->data_size + 4;
-					memmove(EntityReadBuffer, EntityReadBuffer + ph->data_size + 4, CurrentReadLength);
-				}
-				else
-				{
-				}
+				CurrentReadLength -= packetHeader->dataSize + 4;
+				memmove(EntityReadBuffer, EntityReadBuffer + packetHeader->dataSize + 4, CurrentReadLength);
 			}
 			else
 			{

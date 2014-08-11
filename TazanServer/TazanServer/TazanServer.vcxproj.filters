@@ -12,11 +12,20 @@
     <Filter Include="Buffer">
       <UniqueIdentifier>{2f00961f-675b-4ba0-a8cc-6dccf0beae90}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Entity">
-      <UniqueIdentifier>{721056a7-3aa9-4b9c-a95e-49d98ca20ecd}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Lock">
       <UniqueIdentifier>{e19ecaeb-643e-41c0-9730-fad66a3e4713}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TazanServer\Entity">
+      <UniqueIdentifier>{721056a7-3aa9-4b9c-a95e-49d98ca20ecd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TazanServer\Packet">
+      <UniqueIdentifier>{31e8c179-6a0c-4bcd-9cfe-c544e69f271b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TazanServer\Packet\EchoPacket">
+      <UniqueIdentifier>{0aa1e8ab-e251-45a3-b959-4dc2b4c0ebdb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TazanServer\Packet\BroadcastPacket">
+      <UniqueIdentifier>{3731084b-b17d-4365-92c2-a5ff00fee68d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,13 +39,22 @@
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Entity.h">
-      <Filter>Entity</Filter>
+      <Filter>TazanServer\Entity</Filter>
     </ClInclude>
     <ClInclude Include="TazanServer.h">
       <Filter>TazanServer</Filter>
     </ClInclude>
     <ClInclude Include="Lock.h">
       <Filter>Lock</Filter>
+    </ClInclude>
+    <ClInclude Include="Packet.h">
+      <Filter>TazanServer\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="EchoPacket.h">
+      <Filter>TazanServer\Packet\EchoPacket</Filter>
+    </ClInclude>
+    <ClInclude Include="BroadcastPacket.h">
+      <Filter>TazanServer\Packet\BroadcastPacket</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -47,11 +65,20 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="Entity.cpp">
-      <Filter>Entity</Filter>
+      <Filter>TazanServer\Entity</Filter>
     </ClCompile>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Lock.cpp">
       <Filter>Lock</Filter>
+    </ClCompile>
+    <ClCompile Include="Packet.cpp">
+      <Filter>TazanServer\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="EchoPacket.cpp">
+      <Filter>TazanServer\Packet\EchoPacket</Filter>
+    </ClCompile>
+    <ClCompile Include="BroadcastPacket.cpp">
+      <Filter>TazanServer\Packet\BroadcastPacket</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

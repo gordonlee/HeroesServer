@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <set>
+#include <map>
 #include <memory>
 #include <utility>
 

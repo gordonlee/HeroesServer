@@ -2,8 +2,12 @@
 
 #include "TazanServer.h"
 
+#include "Packet.h"
+
 int main(int argc, char* argv[])
 {
+	InitPacket();
+
 	try
 	{
 		boost::asio::io_service io_service;
