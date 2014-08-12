@@ -2,6 +2,8 @@
 
 #include "stdafx.h"
 
+#include "PacketSerializer.h"
+
 #define MakePacket(packetType) \
 struct packetType; \
 void Handler##packetType(PacketHeader* inPacket, Entity* entity, TazanServer* server); \

@@ -22,3 +22,6 @@ public:
 private:
 	LockSource* lockSource;
 };
+
+void* LockedMalloc(LockSource& lockSource, size_t size);
+void LockedFree(LockSource& lockSource, void* ptr);

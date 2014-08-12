@@ -7,18 +7,21 @@
 
 MakePacketHandler(EchoPacket, 1)
 {
-	if (inPacket->checksum)
+	EchoPacket* packet = (EchoPacket*)inPacket;
+	if (packet->checksum == 0x55)
 	{
-		char* buf = NULL;
-		{
-			Lock lock(server->GetLockSource());
-			buf = (char*)tc_malloc(inPacket->dataSize + 6);
-		}
+		EchoResultPacket outPacket;
+		outPacket.dataSize = inPacket->dataSize;
+		outPacket.flag = 0x1;
+		outPacket.checksum = 0x55;
+		outPacket.data = (char*)&packet->data;
 
-		short ref_count = 1;
-		memcpy(buf, (void*)&ref_count, 2);
-		memcpy(buf + 2, inPacket, inPacket->dataSize + 4);
+		PacketSerializer* ps = new PacketSerializer(server->GetLockSource(), outPacket.dataSize + 4);
+		ps->AddData(&outPacket, 4);
+		ps->AddData(outPacket.data, outPacket.dataSize);
 
-		entity->DoWrite(buf, inPacket->dataSize + 4);
+		ps->SetRefCount(1);
+
+		entity->DoWrite(ps);
 	}
 }

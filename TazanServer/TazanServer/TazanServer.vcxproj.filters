@@ -27,6 +27,9 @@
     <Filter Include="TazanServer\Packet\BroadcastPacket">
       <UniqueIdentifier>{3731084b-b17d-4365-92c2-a5ff00fee68d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="TazanServer\Packet\PacketSerializer">
+      <UniqueIdentifier>{7d5fb608-c3b7-4c86-9837-a7e3e3d10a2f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -56,6 +59,9 @@
     <ClInclude Include="BroadcastPacket.h">
       <Filter>TazanServer\Packet\BroadcastPacket</Filter>
     </ClInclude>
+    <ClInclude Include="PacketSerializer.h">
+      <Filter>TazanServer\Packet\PacketSerializer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TazanServer.cpp">
@@ -79,6 +85,9 @@
     </ClCompile>
     <ClCompile Include="BroadcastPacket.cpp">
       <Filter>TazanServer\Packet\BroadcastPacket</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketSerializer.cpp">
+      <Filter>TazanServer\Packet\PacketSerializer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

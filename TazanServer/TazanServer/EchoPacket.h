@@ -6,3 +6,8 @@ MakePacket(EchoPacket)
 {
 	char* data;
 };
+
+MakePacket(EchoResultPacket)
+{
+	char* data;
+};

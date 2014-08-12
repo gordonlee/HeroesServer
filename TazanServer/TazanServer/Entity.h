@@ -2,9 +2,8 @@
 
 #include "stdafx.h"
 
-#include "Lock.h"
-
 class TazanServer;
+class PacketSerializer;
 class Entity
 	: public std::enable_shared_from_this<Entity>
 {
@@ -17,7 +16,7 @@ public:
 
 public:
 	virtual void DoRead();
-	virtual void DoWrite(char* send_buffer, std::size_t length);
+	virtual void DoWrite(PacketSerializer* ps);
 
 private:
 	TazanServer* MyTazan;

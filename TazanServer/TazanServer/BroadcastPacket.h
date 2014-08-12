@@ -6,3 +6,8 @@ MakePacket(BroadcastPacket)
 {
 	char* data;
 };
+
+MakePacket(BroadcastResultPacket)
+{
+	char* data;
+};

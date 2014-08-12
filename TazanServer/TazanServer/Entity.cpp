@@ -4,8 +4,9 @@
 
 #include "TazanServer.h"
 #include "Packet.h"
+#include "PacketSerializer.h"
 
-#include "EchoPacket.h"
+#include "Lock.h"
 
 Entity::Entity(tcp::socket& socket)
 : EntitySocket(std::move(socket)),
@@ -93,31 +94,27 @@ void Entity::DoRead()
 	});
 }
 
-void Entity::DoWrite(char* send_buffer, std::size_t length)
+void Entity::DoWrite(PacketSerializer* ps)
 {
 	auto self(shared_from_this());
-	boost::asio::async_write(EntitySocket, boost::asio::buffer(send_buffer + 2, length),
-		[this, self, send_buffer, length](boost::system::error_code ec, std::size_t send_length)
+	boost::asio::async_write(EntitySocket, boost::asio::buffer(ps->GetBuffer(), ps->GetBufferSize()),
+		[this, self, ps](boost::system::error_code ec, std::size_t send_length)
 	{
-		short* ref_count = (short*)send_buffer;
-		--(*ref_count);
-
-		if (*ref_count <= 0)
-		{
-			Lock lock(MyTazan->GetLockSource());
-			tc_free(send_buffer);
-		}
-
 		if (!ec)
 		{
 		}
 		else
 		{
-			if (send_length != 0 && send_length != length)
+			if (send_length != 0 && send_length != ps->GetBufferSize())
 			{
-				printf("Send Length is different [ %d : %d ]\n", send_length, length);
+				printf("Send Length is different [ %d : %d ]\n", send_length, ps->GetBufferSize());
 			}
 			printf("Send Error Code : %s\n", ec.message().c_str());
+		}
+
+		if (ps->DecreaseRefCount())
+		{
+			delete ps;
 		}
 	});
 }
