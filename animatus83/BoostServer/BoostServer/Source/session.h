@@ -44,12 +44,11 @@ private:
 	boost::asio::io_service::strand strand_;
 	tcp::socket socket_;
 	
-	char data_[DEF_MAX_PACKETSIZE * 10];
+	char data_[DEF_MAX_PACKETSIZE];
 	boost::circular_buffer<BYTE>* cir_buffer_;
-	long packet_cnt_;
 
-	long recvcnt;
-	long processcnt;
+	//std::array<char, DEF_MAX_PACKETSIZE * 2> buffer_;
+
 };
 
 #endif

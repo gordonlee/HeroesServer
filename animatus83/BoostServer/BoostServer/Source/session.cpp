@@ -18,23 +18,22 @@ strand_(io_service)
 	socket_.set_option(boost::asio::socket_base::linger(true, 20), ec);
 
 	parentserver_ = parent;
-	packet_cnt_ = 0;
 
-	recvcnt = 0;
-	processcnt = 0;
-		
+
 	cir_buffer_ = new boost::circular_buffer<BYTE>;
-	cir_buffer_->set_capacity( DEF_MAX_PACKETSIZE * 100);
+	cir_buffer_->set_capacity( DEF_MAX_PACKETSIZE * 2);
 	
 }
 session::~session()
 {
-	socket_.shutdown(socket_.shutdown_both);
+	
 	delete cir_buffer_;
 }
 
 void session::Shudown()
 {
+	parentserver_ = NULL;
+	socket_.shutdown(socket_.shutdown_both);
 	delete this;
 }
 
@@ -65,8 +64,6 @@ void session::handle_read(const boost::system::error_code& error, size_t bytes_t
 	if (!error)
 	{
 		cir_buffer_->insert(cir_buffer_->end(), data_, data_ + bytes_transferred);		
-				
-		BOOST_INTERLOCKED_INCREMENT(&recvcnt);
 	
 		socket_.async_read_some(boost::asio::buffer(data_, DEF_MAX_PACKETSIZE),
 			boost::bind(&session::handle_read, this,
@@ -97,16 +94,23 @@ void session::handle_write(const boost::system::error_code& error)
 
 	}
 	else
-	{
-		std::cout << error.message() << std::endl;
-		parentserver_->DelSession(this);
+	{	
+		if (parentserver_ != NULL &&
+			(boost::asio::error::eof == error || boost::asio::error::connection_reset == error))
+		{
+			parentserver_->DelSession(this);
+		}
+		else
+		{
+			std::cout << "Write : " << error.message() << std::endl;
+		}
 	}
 }
 
 
 void session::ParsePacket()
 {	
-	int parsecnt = 5;
+	int parsecnt = 3;
 	while (1)
 	{
 		if ( parsecnt == 0 )
@@ -116,15 +120,26 @@ void session::ParsePacket()
 		
 		// 패킷 구조 
 		// Header ( int ) / BODY (BYTE[65532] )
-			// Header 구조 : 길이 (Short) / FLAG (BYTE) / Check Sum (BYTE)
+		// Header 구조 : 길이 (Short) / FLAG (BYTE) / Check Sum (BYTE)
 		
 		// 최소 헤더 사이즈
 		if (sizeof(int) > cir_buffer_->size())
 			return;
+
+
+		char* begin = NULL;
+
+		
+		if ( cir_buffer_->array_two().second != 0)
+		{
+			begin = (char*)cir_buffer_->linearize();
+		}
+		else
+		{
+			begin = (char*)cir_buffer_->array_one().first;
+		}
 		
 		
-		char* begin = (char*)cir_buffer_->linearize();
-				
 		int index = 0;
 		unsigned short bodysize = 0;
 		BYTE flag = 0;
@@ -141,7 +156,7 @@ void session::ParsePacket()
 		ZeroMemory(packet, DEF_MAX_PACKETSIZE);
 
 		if (bodysize + DEF_HEADER_SIZE <= cir_buffer_->size())
-		{			
+		{
 			GetData(packet, begin, index ,bodysize + DEF_HEADER_SIZE);
 
 			cir_buffer_->erase_begin(index);
@@ -153,14 +168,7 @@ void session::ParsePacket()
 		}
 
 		ProcessPacket(packet, bodysize, flag);
-
-		if (recvcnt % 1000 == 0 || processcnt % 1000 == 0)
-		{
-			std::cout << " [ " << socket_.native().remote_endpoint().port() << " ] " << ": " << "recv cnt : " << recvcnt << "\t process cnt : " << processcnt << std::endl;
-			std::cout << " [ " << socket_.native().remote_endpoint().port() << " ] " << ": " << "buffer size : " << cir_buffer_->size() << std::endl;			
-		}	
-
-		parsecnt--;
+		parsecnt++;
 	}
 }
 
@@ -184,8 +192,7 @@ bool session::CheckHeader(char* begin, unsigned short& bodysize, BYTE& flag, BYT
 //추후 헤더 파싱이 있어야 한다.
 void session::ProcessPacket(char* packet, unsigned short bodysize, BYTE flag)
 {
-	BOOST_INTERLOCKED_INCREMENT(&processcnt);
-	//SendTestPacket(packet, bodysize, flag);
+	SendTestPacket(packet, bodysize, flag);
 }
 
 void session::SendTestPacket(char* packet, unsigned short bodysize, BYTE flag)
@@ -215,12 +222,19 @@ void session::SendTestPacket(char* packet, unsigned short bodysize, BYTE flag)
 
 void session::SendPacket(char* sendbuff, int sendsize)
 {
-	
-	boost::asio::async_write(socket_,
-		boost::asio::buffer(sendbuff, sendsize),
-		boost::bind(&session::handle_write, this,
-		boost::asio::placeholders::error));
-	
+	try
+	{
+
+		boost::system::error_code ignored_error;
+		boost::asio::write(socket_,
+			boost::asio::buffer(sendbuff, sendsize),
+			boost::asio::transfer_all(),
+			ignored_error);
+	}
+	catch (std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
 }
 
 void session::MakeHeader(char* sendbuff, int& idx, unsigned short bodysize, BYTE flag, BYTE checksum)

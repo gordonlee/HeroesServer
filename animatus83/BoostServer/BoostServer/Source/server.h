@@ -1,6 +1,6 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
-
+#include <boost/thread.hpp>
 #include "session.h"
 
 class server
@@ -18,10 +18,15 @@ private:
 	void handle_accept(session* new_session, const boost::system::error_code& error);	
 	
 	boost::asio::io_service& io_service_;
+
 	tcp::acceptor acceptor_;
+	
 
 	
 	std::map< int, session*  > sessions_;
+
+
+	boost::thread_group g;
 };
 
 static server* g_server = NULL;
