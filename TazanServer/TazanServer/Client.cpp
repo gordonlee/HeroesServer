@@ -12,6 +12,11 @@ Client::Client(tcp::socket& socket)
 : ClientSocket(std::move(socket)),
 CurrentReadLength(0)
 {
+	IsLogin = false;
+	ClientUserInfo.UserID = -1;
+	ClientUserInfo.X = -1;
+	ClientUserInfo.Y = -1;
+	ClientUserInfo.UserDirection = Direction::Down;
 }
 
 void Client::OnConnected(TazanServer* cheetah)
@@ -58,9 +63,8 @@ void Client::DoRead()
 			PacketHeader* packetHeader = (PacketHeader*)ClientReadBuffer;
 			if (packetHeader->dataSize + 4 <= CurrentReadLength)
 			{
-				HandlePacket(packetHeader, ((Client*)this), MyTazan);
-
 				CurrentReadLength -= packetHeader->dataSize + 4;
+				HandlePacket(packetHeader, ((Client*)this), MyTazan);
 				memmove(ClientReadBuffer, ClientReadBuffer + packetHeader->dataSize + 4, CurrentReadLength);
 			}
 			else
@@ -109,6 +113,7 @@ void Client::DoWrite(PacketSerializer* ps)
 			printf("Send Error Code : %s\n", ec.message().c_str());*/
 		}
 
+		Lock lock(MyTazan->GetLockSource());
 		if (ps->DecreaseRefCount())
 		{
 			delete ps;

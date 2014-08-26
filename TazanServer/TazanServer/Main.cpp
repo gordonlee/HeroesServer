@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
 
 		TazanServer g_server(io_service);
 
-#pragma omp parallel
+//#pragma omp parallel
 		io_service.run();
 	}
 	catch (std::exception& e)

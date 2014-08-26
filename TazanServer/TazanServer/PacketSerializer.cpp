@@ -39,8 +39,6 @@ void PacketSerializer::SetRefCount(short refCount)
 
 bool PacketSerializer::DecreaseRefCount()
 {
-	Lock lock(lockSource);
-
 	--RefCount;
 
 	if (RefCount > 0)
@@ -48,7 +46,7 @@ bool PacketSerializer::DecreaseRefCount()
 		return false;
 	}
 
-	if (Buffer != NULL)
+	else if (RefCount == 0 && Buffer != NULL)
 	{
 		tc_free(Buffer);
 		Buffer = NULL;

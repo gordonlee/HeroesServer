@@ -2,6 +2,8 @@
 
 #include "stdafx.h"
 
+#include "UserInfo.h"
+
 class TazanServer;
 class PacketSerializer;
 class Client
@@ -17,6 +19,10 @@ public:
 public:
 	void DoRead();
 	void DoWrite(PacketSerializer* ps);
+
+public:
+	bool IsLogin;
+	UserInfo ClientUserInfo;
 
 protected:
 	TazanServer* MyTazan;

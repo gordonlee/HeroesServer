@@ -30,6 +30,12 @@
     <Filter Include="Client">
       <UniqueIdentifier>{721056a7-3aa9-4b9c-a95e-49d98ca20ecd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Packet\LoginMessage">
+      <UniqueIdentifier>{a7538c83-a285-48a0-bc3b-625835bcc0f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Client\UserInfo">
+      <UniqueIdentifier>{e1019bfd-e652-45f6-81a0-1bbcfcfb3380}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -62,6 +68,12 @@
     <ClInclude Include="Client.h">
       <Filter>Client</Filter>
     </ClInclude>
+    <ClInclude Include="LoginMessage.h">
+      <Filter>Packet\LoginMessage</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInfo.h">
+      <Filter>Client\UserInfo</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TazanServer.cpp">
@@ -88,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="Client.cpp">
       <Filter>Client</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginMessage.cpp">
+      <Filter>Packet\LoginMessage</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
