@@ -109,7 +109,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		SockAddr.sin_family = AF_INET;
 		SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
 
-		connect(g_Socket, (LPSOCKADDR)(&SockAddr), sizeof(SockAddr));
+		nResult = connect(g_Socket, (LPSOCKADDR)(&SockAddr), sizeof(SockAddr));
+		if (nResult == SOCKET_ERROR)
+		{
+			MessageBox(g_hWnd, TEXT("Server Connect Faile"), TEXT("Critical Error"), MB_ICONERROR);
+			return -1;
+		}
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -123,15 +128,15 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		return 1;
 	}
 	// 컬러키를 설정합니다.
-	ImageAttributes colorKey;
-	colorKey.SetColorKey(Color(255, 0, 255), Color(255, 0, 255), ColorAdjustType::ColorAdjustTypeBitmap);
+	ImageAttributes* colorKey = new ImageAttributes;
+	colorKey->SetColorKey(Color(255, 0, 255), Color(255, 0, 255), ColorAdjustType::ColorAdjustTypeBitmap);
 	// 폰트를 설정합니다.
-	Font font(TEXT("Arial"), 10);
-	StringFormat stringFormat;
-	stringFormat.SetAlignment(StringAlignment::StringAlignmentCenter);
-	stringFormat.SetLineAlignment(StringAlignment::StringAlignmentCenter);
-	SolidBrush blackBrush(Color(100, 0, 0, 0));
-	SolidBrush whiteBrush(Color(255, 255, 255));
+	Font* font = new Font(TEXT("Arial"), 10);
+	StringFormat* stringFormat = new StringFormat;
+	stringFormat->SetAlignment(StringAlignment::StringAlignmentCenter);
+	stringFormat->SetLineAlignment(StringAlignment::StringAlignmentCenter);
+	SolidBrush* blackBrush = new SolidBrush(Color(100, 0, 0, 0));
+	SolidBrush* whiteBrush = new SolidBrush(Color(255, 255, 255));
 
 	// 디스플레이 클래스의 인스턴스를 얻어옵니다.
 	Display *Ds = Ds->GetInstance();
@@ -208,7 +213,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			// 타일의 크기는 20*20인데 캐릭터 크기는 18*20이므로 기준 좌표에서 x좌표에 1을 더해서 그려줍니다.
 			Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
 				RectF(g_MyUserInfo.X * 20.f + 1, g_MyUserInfo.Y * 20.f, 18.f, 20.f),
-				0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, &colorKey);
+				0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
 			// 다른 캐릭터를 그립니다.
@@ -216,7 +221,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			{
 				Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
 					RectF(it->X * 20.f + 1, it->Y * 20.f, 18.f, 20.f),
-					0.f, it->UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, &colorKey);
+					0.f, it->UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
 			}
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
@@ -225,8 +230,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			{
 				wchar_t buf[256];
 				wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), g_MyUserInfo.UserID, g_MyUserInfo.X, g_MyUserInfo.Y, GetDirectionToString(g_MyUserInfo.UserDirection));
-				Ds->pBackBuffer->FillRectangle(&blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
-				Ds->pBackBuffer->DrawString(buf, -1, &font, RectF(mousePos.x, mousePos.y, 150, 50), &stringFormat, &whiteBrush);
+				Ds->pBackBuffer->FillRectangle(blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(mousePos.x, mousePos.y, 150, 50), stringFormat, whiteBrush);
 			}
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
@@ -237,8 +242,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 				{
 					wchar_t buf[256];
 					wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), it->UserID, it->X, it->Y, GetDirectionToString(it->UserDirection));
-					Ds->pBackBuffer->FillRectangle(&blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
-					Ds->pBackBuffer->DrawString(buf, -1, &font, RectF(mousePos.x, mousePos.y, 150, 50), &stringFormat, &whiteBrush);
+					Ds->pBackBuffer->FillRectangle(blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
+					Ds->pBackBuffer->DrawString(buf, -1, font, RectF(mousePos.x, mousePos.y, 150, 50), stringFormat, whiteBrush);
 					break;
 				}
 			}
@@ -250,6 +255,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		
 		Sleep(1);
 	}
+
+	// 리소스를 해제합니다.
+	delete font;
+	delete stringFormat;
+	delete whiteBrush;
+	delete blackBrush;
+	delete colorKey;
 
 	// 소켓을 종료합니다.
 	closesocket(g_Socket);
