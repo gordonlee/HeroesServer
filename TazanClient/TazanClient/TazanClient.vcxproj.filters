@@ -19,6 +19,9 @@
     <Filter Include="UserInfo">
       <UniqueIdentifier>{419ca2d9-d34f-4dfb-bb57-d584259e298e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{9299590d-b059-4333-81d8-4911c7ef1e33}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp">
@@ -50,6 +53,9 @@
     </ClInclude>
     <ClInclude Include="UserInfo.h">
       <Filter>UserInfo</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.h">
+      <Filter>Utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -11,6 +11,31 @@ typedef enum Direction
 	Right = 3
 };
 
+const TCHAR* GetDirectionToString(Direction direction)
+{
+	switch (direction)
+	{
+	case Direction::Down:
+	{
+		return TEXT("Down");
+	}
+	case Direction::Left:
+	{
+		return TEXT("Left");
+	}
+	case Direction::Up:
+	{
+		return TEXT("Up");
+	}
+	case Direction::Right:
+	{
+		return TEXT("Right");
+	}
+	}
+	
+	return TEXT("None");
+}
+
 struct UserInfo
 {
 	int UserID;
@@ -19,6 +44,7 @@ struct UserInfo
 	Direction UserDirection;
 
 	UserInfo()
+		: UserID(-1), X(-1), Y(-1), UserDirection(Direction::Down)
 	{}
 	UserInfo(int userID, int x, int y, Direction userDirection)
 		: UserID(userID), X(x), Y(y), UserDirection(userDirection)

@@ -1,7 +1,10 @@
 #include "App.h"
 #include "AppMsgProc.h"
+#include "Utility.h"
+
 #include "Display.h"
 #include "Images.h"
+
 #include "UserInfo.h"
 
 HWND g_hWnd;
@@ -116,12 +119,19 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	// 이미지들을 불러옵니다.
 	if(!Images::Loading())
 	{
-		MessageBox(g_hWnd, L"Loading Fail", L"Error", MB_OK);
+		MessageBox(g_hWnd, TEXT("Loading Fail"), TEXT("Error"), MB_OK);
 		return 1;
 	}
 	// 컬러키를 설정합니다.
 	ImageAttributes colorKey;
 	colorKey.SetColorKey(Color(255, 0, 255), Color(255, 0, 255), ColorAdjustType::ColorAdjustTypeBitmap);
+	// 폰트를 설정합니다.
+	Font font(TEXT("Arial"), 10);
+	StringFormat stringFormat;
+	stringFormat.SetAlignment(StringAlignment::StringAlignmentCenter);
+	stringFormat.SetLineAlignment(StringAlignment::StringAlignmentCenter);
+	SolidBrush blackBrush(Color(100, 0, 0, 0));
+	SolidBrush whiteBrush(Color(255, 255, 255));
 
 	// 디스플레이 클래스의 인스턴스를 얻어옵니다.
 	Display *Ds = Ds->GetInstance();
@@ -146,64 +156,103 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	ZeroMemory(&Message, sizeof(Message));
 	while(Message.message != WM_QUIT)
 	{
+		// 마우스 좌표를 구합니다.
+		GetCursorPos(&mousePos);
+		ScreenToClient(g_hWnd, &mousePos);
+
         if(PeekMessage(&Message, NULL, 0, 0, PM_REMOVE))
         {
             TranslateMessage(&Message);
             DispatchMessage(&Message);
-		}
-		else
-		{
-			DWORD endTime = timeGetTime();
-			if (endTime - startTime >= g_fpsElapsed)
+
+			// 마우스 입력처리를 합니다.
+			switch (Message.message)
 			{
-				startTime = endTime;
+			case WM_LBUTTONDOWN:
+			{
+				wchar_t buffer[256];
+				wsprintf(buffer, TEXT("[X,Y] : [%d,%d]"), mousePos.x, mousePos.y);
+				MessageBox(g_hWnd, buffer, TEXT("Click"), MB_OK);
+				break;
+			}
+			}
+		}
 
-				// 마우스 좌표를 구합니다.
-				GetCursorPos(&mousePos);
-				ScreenToClient(g_hWnd, &mousePos);
+		DWORD endTime = timeGetTime();
+		if (endTime - startTime >= g_fpsElapsed)
+		{
+			startTime = endTime;
 
-				// 화면에 그리기를 시작합니다.
-				Ds->BeginDraw();
+			// 화면에 그리기를 시작합니다.
+			Ds->BeginDraw();
 
-				///////////////////////////////////////////////////////////////////////////
-				// 바닥 타일을 그립니다.
-				for (int i = 0; i < 30; ++i)
+			///////////////////////////////////////////////////////////////////////////
+			// 바닥 타일을 그립니다.
+			for (int i = 0; i < 30; ++i)
+			{
+				for (int j = 0; j < 30; ++j)
 				{
-					for (int j = 0; j < 30; ++j)
+					if (CheckPointInRect(mousePos.x, mousePos.y, i*20, j*20, 20, 20))
 					{
-						if (i * 20 <= mousePos.x && mousePos.x < (i + 1) * 20 &&
-							j * 20 <= mousePos.y && mousePos.y < (j + 1) * 20)
-						{
-							Ds->pBackBuffer->DrawImage(Images::pImgOveredTile, PointF(i * 20.f, j * 20.f));
-						}
-						else
-						{
-							Ds->pBackBuffer->DrawImage(Images::pImgTile, PointF(i * 20.f, j * 20.f));
-						}
+						Ds->pBackBuffer->DrawImage(Images::pImgOveredTile, PointF(i * 20.f, j * 20.f));
+					}
+					else
+					{
+						Ds->pBackBuffer->DrawImage(Images::pImgTile, PointF(i * 20.f, j * 20.f));
 					}
 				}
-				///////////////////////////////////////////////////////////////////////////
-				///////////////////////////////////////////////////////////////////////////
-				// 내 캐릭터를 그립니다.
-				Ds->pBackBuffer->DrawImage(Images::pImgCharacter, RectF(g_MyUserInfo.X * 20.f, g_MyUserInfo.Y * 20.f, 18.f, 20.f),
-					0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, &colorKey);
-				///////////////////////////////////////////////////////////////////////////
-				///////////////////////////////////////////////////////////////////////////
-				// 다른 캐릭터를 그립니다.
-				for (auto& it : g_UserInfoList)
-				{
-					Ds->pBackBuffer->DrawImage(Images::pImgCharacter, RectF(it->X * 20.f, it->Y * 20.f, 18.f, 20.f),
-						0.f, it->UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, &colorKey);
-				}
-				///////////////////////////////////////////////////////////////////////////
-
-				// 화면에 그리기를 종료합니다.
-				Ds->EndDraw();
 			}
+			///////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////
+			// 내 캐릭터를 그립니다.
+			// 타일의 크기는 20*20인데 캐릭터 크기는 18*20이므로 기준 좌표에서 x좌표에 1을 더해서 그려줍니다.
+			Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
+				RectF(g_MyUserInfo.X * 20.f + 1, g_MyUserInfo.Y * 20.f, 18.f, 20.f),
+				0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, &colorKey);
+			///////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////
+			// 다른 캐릭터를 그립니다.
+			for (auto& it : g_UserInfoList)
+			{
+				Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
+					RectF(it->X * 20.f + 1, it->Y * 20.f, 18.f, 20.f),
+					0.f, it->UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, &colorKey);
+			}
+			///////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////
+			// 마우스가 내 캐릭터 위에 있다면 내 캐릭터 정보를 보여줍니다.
+			if (CheckPointInRect(mousePos.x, mousePos.y, g_MyUserInfo.X * 20, g_MyUserInfo.Y * 20, 20, 20))
+			{
+				wchar_t buf[256];
+				wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), g_MyUserInfo.UserID, g_MyUserInfo.X, g_MyUserInfo.Y, GetDirectionToString(g_MyUserInfo.UserDirection));
+				Ds->pBackBuffer->FillRectangle(&blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
+				Ds->pBackBuffer->DrawString(buf, -1, &font, RectF(mousePos.x, mousePos.y, 150, 50), &stringFormat, &whiteBrush);
+			}
+			///////////////////////////////////////////////////////////////////////////
+			///////////////////////////////////////////////////////////////////////////
+			// 마우스가 다른 캐릭터 위에 있다면 다른 캐릭터 정보를 보여줍니다.
+			else for (auto& it : g_UserInfoList)
+			{
+				if (CheckPointInRect(mousePos.x, mousePos.y, it->X * 20, it->Y * 20, 20, 20))
+				{
+					wchar_t buf[256];
+					wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), it->UserID, it->X, it->Y, GetDirectionToString(it->UserDirection));
+					Ds->pBackBuffer->FillRectangle(&blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
+					Ds->pBackBuffer->DrawString(buf, -1, &font, RectF(mousePos.x, mousePos.y, 150, 50), &stringFormat, &whiteBrush);
+					break;
+				}
+			}
+			///////////////////////////////////////////////////////////////////////////
+
+			// 화면에 그리기를 종료합니다.
+			Ds->EndDraw();
 		}
 		
 		Sleep(1);
 	}
+
+	// 소켓을 종료합니다.
+	closesocket(g_Socket);
 
 	// 디스플레이 클래스의 인스턴스를 반환합니다.
 	Ds->Release();

@@ -34,5 +34,5 @@ extern SOCKET g_Socket;
 const int g_tileSize = 20;
 const int g_appWidth = g_tileSize * 30;
 const int g_appHeight = g_tileSize * 30;
-const int g_framePerSecond = 30;
+const int g_framePerSecond = 60;
 const int g_fpsElapsed = 1000 / g_framePerSecond;
