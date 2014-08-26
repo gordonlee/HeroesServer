@@ -89,7 +89,7 @@
   <ItemGroup>
     <ClInclude Include="BroadcastPacket.h" />
     <ClInclude Include="EchoPacket.h" />
-    <ClInclude Include="Entity.h" />
+    <ClInclude Include="Client.h" />
     <ClInclude Include="Lock.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketSerializer.h" />
@@ -100,7 +100,7 @@
   <ItemGroup>
     <ClCompile Include="BroadcastPacket.cpp" />
     <ClCompile Include="EchoPacket.cpp" />
-    <ClCompile Include="Entity.cpp" />
+    <ClCompile Include="Client.cpp" />
     <ClCompile Include="Lock.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Packet.cpp" />

@@ -6,20 +6,20 @@
 
 #define MakePacket(packetType) \
 struct packetType; \
-void Handler##packetType(PacketHeader* inPacket, Entity* entity, TazanServer* server); \
+void Handler##packetType(PacketHeader* inPacket, Client* client, TazanServer* server); \
 struct packetType : public PacketHeader
 
 #define MakePacketHandler(packetType, flag) \
-void Handler##packetType(PacketHeader* inPacket, Entity* entity, TazanServer* server)
+void Handler##packetType(PacketHeader* inPacket, Client* client, TazanServer* server)
 
 #define RegisterPacketHandler(flag, packetType) \
 PacketHandlerMap.insert(std::make_pair(flag, Handler##packetType));
 
-#define HandlePacket(packet, entity, server) \
-PacketHandlerMap[packet->flag](packet, entity, server);
+#define HandlePacket(packet, client, server) \
+PacketHandlerMap[packet->flag](packet, client, server);
 
 class TazanServer;
-class Entity;
+class Client;
 
 struct PacketHeader
 {
@@ -28,7 +28,7 @@ struct PacketHeader
 	unsigned char checksum;
 };
 
-typedef void(*PacketHandler)(PacketHeader* inPacket, Entity* entity, TazanServer* server);
+typedef void(*PacketHandler)(PacketHeader* inPacket, Client* Client, TazanServer* server);
 
 extern std::map<unsigned char, PacketHandler> PacketHandlerMap;
 void InitPacket();

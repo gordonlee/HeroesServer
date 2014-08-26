@@ -3,7 +3,7 @@
 #include "stdafx.h"
 
 #include "Lock.h"
-#include "Entity.h"
+#include "Client.h"
 
 class TazanServer
 {
@@ -15,14 +15,14 @@ private:
 	void DoAccept();
 
 private:
-	std::set<std::shared_ptr<Entity>> Entities;
+	std::set<std::shared_ptr<Client>> Entities;
 public:
-	std::set<std::shared_ptr<Entity>> GetEntities() { Lock lock(lockSource); return Entities; }
+	std::set<std::shared_ptr<Client>> GetEntities() { Lock lock(lockSource); return Entities; }
 public:
-	void InsertEntity(std::shared_ptr<Entity> entity) { Lock lock(lockSource); Entities.insert(entity); }
-	void EraseEntity(std::shared_ptr<Entity> entity) { Lock lock(lockSource); Entities.erase(entity); }
+	void InsertClient(std::shared_ptr<Client> Client) { Lock lock(lockSource); Entities.insert(Client); }
+	void EraseClient(std::shared_ptr<Client> Client) { Lock lock(lockSource); Entities.erase(Client); }
 public:
-	size_t GetEntityCount() { Lock lock(lockSource); return Entities.size(); }
+	size_t GetClientCount() { Lock lock(lockSource); return Entities.size(); }
 
 private:
 	LockSource lockSource;

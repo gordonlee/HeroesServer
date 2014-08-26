@@ -3,7 +3,7 @@
 #include "EchoPacket.h"
 
 #include "TazanServer.h"
-#include "Entity.h"
+#include "Client.h"
 
 MakePacketHandler(EchoPacket, 1)
 {
@@ -22,6 +22,6 @@ MakePacketHandler(EchoPacket, 1)
 
 		ps->SetRefCount(1);
 
-		entity->DoWrite(ps);
+		client->DoWrite(ps);
 	}
 }

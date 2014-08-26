@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "TazanServer.h"
+#include "Client.h"
 
 TazanServer::TazanServer(boost::asio::io_service& io_service, short port)
 : Acceptor(io_service, tcp::endpoint(tcp::v4(), port)),
@@ -28,9 +29,14 @@ void TazanServer::DoAccept()
 		{
 			AcceptedSocket.set_option(option_nodelay);
 			
+<<<<<<< HEAD
+			std::make_shared<Client>(std::move(AcceptedSocket))->OnConnected((TazanServer*)this);
+			printf("Connected, Count : %d\n", GetClientCount());
+=======
 			std::make_shared<Entity>(std::move(AcceptedSocket))->OnConnected((TazanServer*)this);
 
 			printf("A Client is Connected.\n");
+>>>>>>> origin/master
 		}
 
 		DoAccept();

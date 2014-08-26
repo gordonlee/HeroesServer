@@ -3,7 +3,7 @@
 #include "BroadcastPacket.h"
 
 #include "TazanServer.h"
-#include "Entity.h"
+#include "Client.h"
 
 MakePacketHandler(BroadcastPacket, 2)
 {
@@ -20,7 +20,7 @@ MakePacketHandler(BroadcastPacket, 2)
 		ps->AddData(&outPacket, 4);
 		ps->AddData(outPacket.data, outPacket.dataSize);
 
-		std::set<std::shared_ptr<Entity>> Entities = server->GetEntities();
+		std::set<std::shared_ptr<Client>> Entities = server->GetEntities();
 		ps->SetRefCount(Entities.size());
 
 		for (auto& it : Entities)
