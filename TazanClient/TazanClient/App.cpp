@@ -7,6 +7,8 @@
 
 #include "UserInfo.h"
 
+#include "Packet.h"
+
 HWND g_hWnd;
 HINSTANCE g_hInst;
 SOCKET g_Socket;
@@ -40,9 +42,13 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	WndClass.style=CS_HREDRAW | CS_VREDRAW;
 	RegisterClass(&WndClass);
 
+	// 윈도우 크기가 클라이언트 영역을 기준으로 만들어지도록 한다.
+	RECT appClientRect = { 0, 0, g_appWidth, g_appHeight };
+	AdjustWindowRect(&appClientRect, WS_OVERLAPPEDWINDOW, FALSE);
+
 	g_hWnd=CreateWindow(App_ClassName, App_Name, WS_CAPTION | WS_SYSMENU,
 		  CW_USEDEFAULT, CW_USEDEFAULT,
-		  g_appWidth, g_appHeight,
+		  appClientRect.right - appClientRect.left, appClientRect.bottom - appClientRect.top,
 		  NULL, (HMENU)NULL, hInstance, NULL);
 	ShowWindow(g_hWnd, nCmdShow);
 
@@ -112,9 +118,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		nResult = connect(g_Socket, (LPSOCKADDR)(&SockAddr), sizeof(SockAddr));
 		if (nResult == SOCKET_ERROR)
 		{
-			MessageBox(g_hWnd, TEXT("Server Connect Faile"), TEXT("Critical Error"), MB_ICONERROR);
-			return -1;
+			//MessageBox(g_hWnd, TEXT("Server Connect Failed"), TEXT("Critical Error"), MB_ICONERROR);
+			//return -1;
 		}
+		else
+		{
+			LoginRequestMessage msg;
+			send(g_Socket, (char*)&msg, msg.DataSize + 4, 0);
+		}
+		LoginRequestMessage msg;
+		send(g_Socket, (char*)&msg, msg.DataSize + 4, 0);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
@@ -147,7 +160,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	DWORD startTime = timeGetTime();
 
 	// Temp UserInfo Setting
-	g_MyUserInfo.UserID = 1;
+	/*g_MyUserInfo.UserID = 1;
 	g_MyUserInfo.X = 2;
 	g_MyUserInfo.Y = 2;
 	g_MyUserInfo.UserDirection = Direction::Down;
@@ -155,7 +168,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	g_UserInfoList.push_back(new UserInfo(2, 3, 3, Direction::Up));
 	g_UserInfoList.push_back(new UserInfo(2, 4, 3, Direction::Left));
 	g_UserInfoList.push_back(new UserInfo(2, 6, 3, Direction::Right));
-	g_UserInfoList.push_back(new UserInfo(2, 7, 3, Direction::Down));
+	g_UserInfoList.push_back(new UserInfo(2, 7, 3, Direction::Down));*/
 
 	// 루프를 시작합니다.
 	ZeroMemory(&Message, sizeof(Message));
@@ -165,10 +178,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		GetCursorPos(&mousePos);
 		ScreenToClient(g_hWnd, &mousePos);
 
-        if(PeekMessage(&Message, NULL, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&Message);
-            DispatchMessage(&Message);
+		if(PeekMessage(&Message, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&Message);
+			DispatchMessage(&Message);
 
 			// 마우스 입력처리를 합니다.
 			switch (Message.message)

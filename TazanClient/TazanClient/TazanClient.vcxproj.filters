@@ -22,6 +22,9 @@
     <Filter Include="Utility">
       <UniqueIdentifier>{9299590d-b059-4333-81d8-4911c7ef1e33}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Packet">
+      <UniqueIdentifier>{44742a00-ed42-497d-b600-7bb21ade10dc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp">
@@ -35,6 +38,12 @@
     </ClCompile>
     <ClCompile Include="Images.cpp">
       <Filter>Images</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInfo.cpp">
+      <Filter>UserInfo</Filter>
+    </ClCompile>
+    <ClCompile Include="Packet.cpp">
+      <Filter>Packet</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -56,6 +65,9 @@
     </ClInclude>
     <ClInclude Include="Utility.h">
       <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="Packet.h">
+      <Filter>Packet</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

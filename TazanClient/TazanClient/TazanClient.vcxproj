@@ -84,12 +84,15 @@
     <ClCompile Include="AppMsgProc.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="Images.cpp" />
+    <ClCompile Include="Packet.cpp" />
+    <ClCompile Include="UserInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="AppMsgProc.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="Images.h" />
+    <ClInclude Include="Packet.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="UserInfo.h" />
     <ClInclude Include="Utility.h" />
