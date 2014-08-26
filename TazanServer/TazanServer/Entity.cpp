@@ -105,11 +105,11 @@ void Entity::DoWrite(PacketSerializer* ps)
 		}
 		else
 		{
-			if (send_length != 0 && send_length != ps->GetBufferSize())
+			/*if (send_length != 0 && send_length != ps->GetBufferSize())
 			{
 				printf("Send Length is different [ %d : %d ]\n", send_length, ps->GetBufferSize());
 			}
-			printf("Send Error Code : %s\n", ec.message().c_str());
+			printf("Send Error Code : %s\n", ec.message().c_str());*/
 		}
 
 		if (ps->DecreaseRefCount())

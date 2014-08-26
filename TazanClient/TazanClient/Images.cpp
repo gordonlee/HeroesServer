@@ -13,11 +13,11 @@ namespace Images
 	{
 		// 여기에서 이미지를 읽습니다.
 		// 예외 처리를 해주면 좋습니다.
-		pImgTile = new Image(TEXT("tile.png"));
+		pImgTile = new Image(TEXT("resource\\tile.png"));
 		if (!pImgTile) return false;
-		pImgOveredTile = new Image(TEXT("overed_tile.png"));
+		pImgOveredTile = new Image(TEXT("resource\\overed_tile.png"));
 		if (!pImgOveredTile) return false;
-		pImgCharacter = new Image(TEXT("character.png"));
+		pImgCharacter = new Image(TEXT("resource\\character.png"));
 		if (!pImgCharacter) return false;
 
 		return true;

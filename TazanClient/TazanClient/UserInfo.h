@@ -1,5 +1,8 @@
 #pragma once
 
+#include <list>
+using namespace std;
+
 typedef enum Direction
 {
 	Down = 0,
@@ -14,4 +17,13 @@ struct UserInfo
 	int X;
 	int Y;
 	Direction UserDirection;
+
+	UserInfo()
+	{}
+	UserInfo(int userID, int x, int y, Direction userDirection)
+		: UserID(userID), X(x), Y(y), UserDirection(userDirection)
+	{}
 };
+
+extern UserInfo g_MyUserInfo;
+extern list<UserInfo*> g_UserInfoList;

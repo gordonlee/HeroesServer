@@ -29,6 +29,8 @@ void TazanServer::DoAccept()
 			AcceptedSocket.set_option(option_nodelay);
 			
 			std::make_shared<Entity>(std::move(AcceptedSocket))->OnConnected((TazanServer*)this);
+
+			printf("A Client is Connected.\n");
 		}
 
 		DoAccept();

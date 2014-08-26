@@ -5,6 +5,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -20,11 +21,15 @@ using namespace Gdiplus ;
 #include <Mmsystem.h>
 #pragma comment( lib, "winmm.lib" ) 
 
+#include <WinSock2.h>
+#pragma comment(lib, "ws2_32.lib")
+
 #define App_Name TEXT("Tazan Client Miner Ver")
 #define App_ClassName TEXT("Tazan Client Miner Ver Class")
 
 extern HWND g_hWnd;
 extern HINSTANCE g_hInst;
+extern SOCKET g_Socket;
 
 const int g_tileSize = 20;
 const int g_appWidth = g_tileSize * 30;
