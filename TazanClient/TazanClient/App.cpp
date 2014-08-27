@@ -129,6 +129,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 
 		connect(g_Socket, (LPSOCKADDR)(&SockAddr), sizeof(SockAddr));
 
+		// 비동기 소켓이기 때문에 connect가 성공할 때까지 대기합니다.
+		// 50ms당 1번씩 총 40번 connect가 성공했는지 검사하고, 40회 실패하면 종료합니다.
 		int CheckSocketCount = 0;
 		while (true)
 		{
@@ -141,8 +143,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			{
 				if (nResult == 0)
 				{
+					// 연결에 성공하여 서버에 LoginRequestMessage를 보내 로그인을 시도합니다.
 					LoginRequestMessage msg;
-					send(g_Socket, (char*)&msg, msg.DataSize + 4, 0);
+					send(g_Socket, (char*)&msg, sizeof(PacketHeader) + msg.DataSize, 0);
 
 					break;
 				}
