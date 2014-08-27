@@ -10,15 +10,14 @@ MakePacketHandler(EchoPacket, 1)
 	EchoPacket* packet = (EchoPacket*)inPacket;
 	if (packet->checksum == 0x55)
 	{
-		EchoResultPacket outPacket;
-		outPacket.dataSize = inPacket->dataSize;
-		outPacket.flag = 0x1;
-		outPacket.checksum = 0x55;
-		outPacket.data = (char*)&packet->data;
+		PacketHeader packetHeader;
+		packetHeader.dataSize = inPacket->dataSize;
+		packetHeader.flag = 0x1;
+		packetHeader.checksum = 0x55;
 
-		PacketSerializer* ps = new PacketSerializer(server->GetLockSource(), outPacket.dataSize + 4);
-		ps->AddData(&outPacket, 4);
-		ps->AddData(outPacket.data, outPacket.dataSize);
+		PacketSerializer* ps = new PacketSerializer(server->GetLockSource(), sizeof(PacketHeader) + inPacket->dataSize);
+		ps->AddData(&packetHeader, sizeof(PacketHeader));
+		ps->AddData((char*)&packet->data, packetHeader.dataSize);
 
 		ps->SetRefCount(1);
 

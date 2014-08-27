@@ -50,16 +50,16 @@ MakePacketHandler(LoginRequestMessage, 10)
 		printf("[%d] Login : (%d,%d)\n", client->ClientUserInfo.UserID, client->ClientUserInfo.X, client->ClientUserInfo.Y);
 
 		PacketHeader packetHeaderJoinNewUser = { sizeof(UserInfo), 12, 0x55 };
-		PacketSerializer* psJoinNewUser = new PacketSerializer(server->GetLockSource(), 4 + sizeof(UserInfo));
-		psJoinNewUser->AddData(&packetHeaderJoinNewUser, 4);
+		PacketSerializer* psJoinNewUser = new PacketSerializer(server->GetLockSource(), sizeof(PacketHeader) + sizeof(UserInfo));
+		psJoinNewUser->AddData(&packetHeaderJoinNewUser, sizeof(PacketHeader));
 		psJoinNewUser->AddData(&client->ClientUserInfo, sizeof(UserInfo));
 		psJoinNewUser->SetRefCount(LoginedUserCount);
 
-		PacketHeader packetHeaderLoginResult = { sizeof(UserInfo)+4 + sizeof(UserInfo)* LoginedUserCount, 11, 0x55 };
-		PacketSerializer* psLoginResult = new PacketSerializer(server->GetLockSource(), 4 + sizeof(UserInfo) + 4 + sizeof(UserInfo) * LoginedUserCount);
-		psLoginResult->AddData(&packetHeaderLoginResult, 4);
+		PacketHeader packetHeaderLoginResult = { sizeof(UserInfo) + sizeof(int) + sizeof(UserInfo) * LoginedUserCount, 11, 0x55 };
+		PacketSerializer* psLoginResult = new PacketSerializer(server->GetLockSource(), sizeof(PacketHeader) + sizeof(UserInfo) + sizeof(int) + sizeof(UserInfo) * LoginedUserCount);
+		psLoginResult->AddData(&packetHeaderLoginResult, sizeof(PacketHeader));
 		psLoginResult->AddData(&client->ClientUserInfo, sizeof(UserInfo));
-		psLoginResult->AddData(&LoginedUserCount, 4);
+		psLoginResult->AddData(&LoginedUserCount, sizeof(int));
 		for (auto& it : Entities)
 		{
 			if (it->IsLogin == true)

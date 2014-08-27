@@ -30,7 +30,7 @@ void TazanServer::DoAccept()
 			AcceptedSocket.set_option(option_nodelay);
 			
 			std::make_shared<Client>(std::move(AcceptedSocket))->OnConnected((TazanServer*)this);
-			printf("Connected, Count : %d\n", GetClientCount());
+			printf("A Client Connected, Count : %d\n", GetClientCount());
 		}
 
 		DoAccept();
