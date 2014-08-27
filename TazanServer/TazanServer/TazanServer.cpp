@@ -27,6 +27,8 @@ void TazanServer::DoAccept()
 	{
 		if (!ec)
 		{
+			Lock lock(lockSource);
+
 			AcceptedSocket.set_option(option_nodelay);
 			
 			std::make_shared<Client>(std::move(AcceptedSocket))->OnConnected((TazanServer*)this);

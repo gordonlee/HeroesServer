@@ -19,7 +19,8 @@ MakePacketHandler(BroadcastPacket, 2)
 		ps->AddData(&packetHeader, sizeof(PacketHeader));
 		ps->AddData((char*)&packet->data, packetHeader.dataSize);
 
-		std::set<std::shared_ptr<Client>> Entities = server->GetEntities();
+		Lock lock(server->GetLockSource());
+		std::set<std::shared_ptr<Client>>& Entities = server->GetEntities();
 		ps->SetRefCount(Entities.size());
 
 		for (auto& it : Entities)

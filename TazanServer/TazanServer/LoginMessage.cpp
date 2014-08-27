@@ -9,11 +9,11 @@ int maxUserID = 1;
 
 MakePacketHandler(LoginRequestMessage, 10)
 {
+	Lock lock(server->GetLockSource());
 	LoginRequestMessage* packet = (LoginRequestMessage*)inPacket;
 	if (packet->checksum == 0x55)
 	{
-		std::set<std::shared_ptr<Client>> Entities = server->GetEntities();
-		Lock lock(server->GetLockSource());
+		std::set<std::shared_ptr<Client>>& Entities = server->GetEntities();
 
 		int LoginedUserCount = 0;
 
@@ -70,7 +70,7 @@ MakePacketHandler(LoginRequestMessage, 10)
 		}
 		psLoginResult->SetRefCount(1);
 
-		client->IsLogin = true;
 		client->DoWrite(psLoginResult);
+		client->IsLogin = true;
 	}
 }

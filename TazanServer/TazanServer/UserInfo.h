@@ -13,7 +13,7 @@ struct UserInfo
 	int UserID;
 	int X;
 	int Y;
-	Direction UserDirection;
+	int UserDirection;
 
 	UserInfo()
 		: UserID(-1), X(-1), Y(-1), UserDirection(Direction::Down)
