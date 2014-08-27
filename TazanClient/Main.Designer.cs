@@ -72,7 +72,6 @@
             // renderTimer
             // 
             this.renderTimer.Enabled = true;
-            this.renderTimer.Interval = 16;
             this.renderTimer.Tick += new System.EventHandler(this.renderTimer_Tick);
             // 
             // textBox_CurrentClientCount
@@ -292,6 +291,7 @@
             this.button_Stop.TabIndex = 18;
             this.button_Stop.Text = "Stop";
             this.button_Stop.UseVisualStyleBackColor = true;
+            this.button_Stop.Click += new System.EventHandler(this.button_Stop_Click);
             // 
             // button_AI
             // 
@@ -404,7 +404,6 @@
             this.panel_Render.Name = "panel_Render";
             this.panel_Render.Size = new System.Drawing.Size(600, 600);
             this.panel_Render.TabIndex = 2;
-            this.panel_Render.Paint += new System.Windows.Forms.PaintEventHandler(this.panel_Render_Paint);
             this.panel_Render.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel_Render_MouseMove);
             // 
             // Main
