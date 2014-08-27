@@ -1,4 +1,4 @@
-#include "App.h"
+ï»¿#include "App.h"
 #include "AppMsgProc.h"
 #include "Utility.h"
 
@@ -19,6 +19,17 @@ list<UserInfo*> g_UserInfoList;
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		  , LPSTR lpszCmdParam, int nCmdShow)
 {
+	// ë””ë²„ê¹…ìš© ì½˜ì†”ì°½ ë„ìš°ê¸°
+#ifdef _DEBUG
+	FILE* pDebugConsoleFILE = NULL;
+	AllocConsole();
+	freopen_s(&pDebugConsoleFILE, "CONOUT$", "a", stderr);
+	freopen_s(&pDebugConsoleFILE, "CONOUT$", "a", stdout);
+	freopen_s(&pDebugConsoleFILE, "CONIN$", "r", stdin);
+	SetConsoleTitle(App_Name);
+#endif
+	///////////////////////////////////////////////////////////////////////////
+
 	MSG Message;
 	WNDCLASS WndClass;
 	g_hInst=hInstance;
@@ -42,7 +53,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	WndClass.style=CS_HREDRAW | CS_VREDRAW;
 	RegisterClass(&WndClass);
 
-	// À©µµ¿ì Å©±â°¡ Å¬¶óÀÌ¾ğÆ® ¿µ¿ªÀ» ±âÁØÀ¸·Î ¸¸µé¾îÁöµµ·Ï ÇÑ´Ù.
+	// ìœˆë„ìš° í¬ê¸°ê°€ í´ë¼ì´ì–¸íŠ¸ ì˜ì—­ì„ ê¸°ì¤€ìœ¼ë¡œ ë§Œë“¤ì–´ì§€ë„ë¡ í•œë‹¤.
 	RECT appClientRect = { 0, 0, g_appWidth, g_appHeight };
 	AdjustWindowRect(&appClientRect, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -57,7 +68,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	///////////////////////////////////////////////////////////////////////////
 
 	{
-		// Config ÆÄÀÏÀ» ÀĞ½À´Ï´Ù.
+		// Config íŒŒì¼ì„ ì½ìŠµë‹ˆë‹¤.
 		const char* configFileName = "TazanClient.config";
 		FILE* configFile = NULL;
 		fopen_s(&configFile, configFileName, "r");
@@ -78,8 +89,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 
 		fclose(configFile);
 
-		// ¼­¹ö¿¡ ¿¬°áÇÕ´Ï´Ù.
+		// ì„œë²„ì— ì—°ê²°í•©ë‹ˆë‹¤.
 		int nResult = 0;
+		int nResultLen = sizeof(nResult);
 
 		WSADATA wsadata;
 		nResult = WSAStartup(MAKEWORD(2, 2), &wsadata);
@@ -115,35 +127,55 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		SockAddr.sin_family = AF_INET;
 		SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
 
-		nResult = connect(g_Socket, (LPSOCKADDR)(&SockAddr), sizeof(SockAddr));
-		if (nResult == SOCKET_ERROR)
+		connect(g_Socket, (LPSOCKADDR)(&SockAddr), sizeof(SockAddr));
+
+		int CheckSocketCount = 0;
+		while (true)
 		{
-			//MessageBox(g_hWnd, TEXT("Server Connect Failed"), TEXT("Critical Error"), MB_ICONERROR);
-			//return -1;
+			if (getsockopt(g_Socket, SOL_SOCKET, SO_ERROR, (char*)&nResult, &nResultLen) < 0)
+			{
+				MessageBox(g_hWnd, TEXT("Server Connect Failed - getsockopt"), TEXT("Critical Error"), MB_ICONERROR);
+				return -1;
+			}
+			else
+			{
+				if (nResult == 0)
+				{
+					LoginRequestMessage msg;
+					send(g_Socket, (char*)&msg, msg.DataSize + 4, 0);
+
+					break;
+				}
+				else
+				{
+					++CheckSocketCount;
+					if (CheckSocketCount >= 40)
+					{
+						MessageBox(g_hWnd, TEXT("Server Connect Failed (Retry Count : 40)"), TEXT("Critical Error"), MB_ICONERROR);
+						return -1;
+						break;
+					}
+				}
+			}
+
+			::Sleep(50);
 		}
-		else
-		{
-			LoginRequestMessage msg;
-			send(g_Socket, (char*)&msg, msg.DataSize + 4, 0);
-		}
-		LoginRequestMessage msg;
-		send(g_Socket, (char*)&msg, msg.DataSize + 4, 0);
 	}
 
 	///////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////////////
 
-	// ÀÌ¹ÌÁöµéÀ» ºÒ·¯¿É´Ï´Ù.
+	// ì´ë¯¸ì§€ë“¤ì„ ë¶ˆëŸ¬ì˜µë‹ˆë‹¤.
 	if(!Images::Loading())
 	{
 		MessageBox(g_hWnd, TEXT("Loading Fail"), TEXT("Error"), MB_OK);
 		return 1;
 	}
-	// ÄÃ·¯Å°¸¦ ¼³Á¤ÇÕ´Ï´Ù.
+	// ì»¬ëŸ¬í‚¤ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
 	ImageAttributes* colorKey = new ImageAttributes;
 	colorKey->SetColorKey(Color(255, 0, 255), Color(255, 0, 255), ColorAdjustType::ColorAdjustTypeBitmap);
-	// ÆùÆ®¸¦ ¼³Á¤ÇÕ´Ï´Ù.
+	// í°íŠ¸ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
 	Font* font = new Font(TEXT("Arial"), 10);
 	StringFormat* stringFormat = new StringFormat;
 	stringFormat->SetAlignment(StringAlignment::StringAlignmentCenter);
@@ -151,12 +183,12 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	SolidBrush* blackBrush = new SolidBrush(Color(100, 0, 0, 0));
 	SolidBrush* whiteBrush = new SolidBrush(Color(255, 255, 255));
 
-	// µğ½ºÇÃ·¹ÀÌ Å¬·¡½ºÀÇ ÀÎ½ºÅÏ½º¸¦ ¾ò¾î¿É´Ï´Ù.
+	// ë””ìŠ¤í”Œë ˆì´ í´ë˜ìŠ¤ì˜ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ì–»ì–´ì˜µë‹ˆë‹¤.
 	Display *Ds = Ds->GetInstance();
-	// ¸¶¿ì½º ÁÂÇ¥¸¦ ÀúÀåÇÒ º¯¼ö¸¦ »ı¼ºÇÕ´Ï´Ù.
+	// ë§ˆìš°ìŠ¤ ì¢Œí‘œë¥¼ ì €ì¥í•  ë³€ìˆ˜ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
 	POINT mousePos;
 
-	// ÇÁ·¹ÀÓÀ» ÃøÁ¤ÇÒ º¯¼ö¸¦ »ı¼ºÇÕ´Ï´Ù.
+	// í”„ë ˆì„ì„ ì¸¡ì •í•  ë³€ìˆ˜ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
 	DWORD startTime = timeGetTime();
 
 	// Temp UserInfo Setting
@@ -170,11 +202,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	g_UserInfoList.push_back(new UserInfo(2, 6, 3, Direction::Right));
 	g_UserInfoList.push_back(new UserInfo(2, 7, 3, Direction::Down));*/
 
-	// ·çÇÁ¸¦ ½ÃÀÛÇÕ´Ï´Ù.
+	// ë£¨í”„ë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.
 	ZeroMemory(&Message, sizeof(Message));
 	while(Message.message != WM_QUIT)
 	{
-		// ¸¶¿ì½º ÁÂÇ¥¸¦ ±¸ÇÕ´Ï´Ù.
+		// ë§ˆìš°ìŠ¤ ì¢Œí‘œë¥¼ êµ¬í•©ë‹ˆë‹¤.
 		GetCursorPos(&mousePos);
 		ScreenToClient(g_hWnd, &mousePos);
 
@@ -183,7 +215,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			TranslateMessage(&Message);
 			DispatchMessage(&Message);
 
-			// ¸¶¿ì½º ÀÔ·ÂÃ³¸®¸¦ ÇÕ´Ï´Ù.
+			// ë§ˆìš°ìŠ¤ ì…ë ¥ì²˜ë¦¬ë¥¼ í•©ë‹ˆë‹¤.
 			switch (Message.message)
 			{
 			case WM_LBUTTONDOWN:
@@ -201,11 +233,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 		{
 			startTime = endTime;
 
-			// È­¸é¿¡ ±×¸®±â¸¦ ½ÃÀÛÇÕ´Ï´Ù.
+			// í™”ë©´ì— ê·¸ë¦¬ê¸°ë¥¼ ì‹œì‘í•©ë‹ˆë‹¤.
 			Ds->BeginDraw();
 
 			///////////////////////////////////////////////////////////////////////////
-			// ¹Ù´Ú Å¸ÀÏÀ» ±×¸³´Ï´Ù.
+			// ë°”ë‹¥ íƒ€ì¼ì„ ê·¸ë¦½ë‹ˆë‹¤.
 			for (int i = 0; i < 30; ++i)
 			{
 				for (int j = 0; j < 30; ++j)
@@ -222,14 +254,14 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			}
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
-			// ³» Ä³¸¯ÅÍ¸¦ ±×¸³´Ï´Ù.
-			// Å¸ÀÏÀÇ Å©±â´Â 20*20ÀÎµ¥ Ä³¸¯ÅÍ Å©±â´Â 18*20ÀÌ¹Ç·Î ±âÁØ ÁÂÇ¥¿¡¼­ xÁÂÇ¥¿¡ 1À» ´õÇØ¼­ ±×·ÁÁİ´Ï´Ù.
+			// ë‚´ ìºë¦­í„°ë¥¼ ê·¸ë¦½ë‹ˆë‹¤.
+			// íƒ€ì¼ì˜ í¬ê¸°ëŠ” 20*20ì¸ë° ìºë¦­í„° í¬ê¸°ëŠ” 18*20ì´ë¯€ë¡œ ê¸°ì¤€ ì¢Œí‘œì—ì„œ xì¢Œí‘œì— 1ì„ ë”í•´ì„œ ê·¸ë ¤ì¤ë‹ˆë‹¤.
 			Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
 				RectF(g_MyUserInfo.X * 20.f + 1, g_MyUserInfo.Y * 20.f, 18.f, 20.f),
 				0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
-			// ´Ù¸¥ Ä³¸¯ÅÍ¸¦ ±×¸³´Ï´Ù.
+			// ë‹¤ë¥¸ ìºë¦­í„°ë¥¼ ê·¸ë¦½ë‹ˆë‹¤.
 			for (auto& it : g_UserInfoList)
 			{
 				Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
@@ -238,7 +270,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			}
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
-			// ¸¶¿ì½º°¡ ³» Ä³¸¯ÅÍ À§¿¡ ÀÖ´Ù¸é ³» Ä³¸¯ÅÍ Á¤º¸¸¦ º¸¿©Áİ´Ï´Ù.
+			// ë§ˆìš°ìŠ¤ê°€ ë‚´ ìºë¦­í„° ìœ„ì— ìˆë‹¤ë©´ ë‚´ ìºë¦­í„° ì •ë³´ë¥¼ ë³´ì—¬ì¤ë‹ˆë‹¤.
 			if (CheckPointInRect(mousePos.x, mousePos.y, g_MyUserInfo.X * 20, g_MyUserInfo.Y * 20, 20, 20))
 			{
 				wchar_t buf[256];
@@ -248,7 +280,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			}
 			///////////////////////////////////////////////////////////////////////////
 			///////////////////////////////////////////////////////////////////////////
-			// ¸¶¿ì½º°¡ ´Ù¸¥ Ä³¸¯ÅÍ À§¿¡ ÀÖ´Ù¸é ´Ù¸¥ Ä³¸¯ÅÍ Á¤º¸¸¦ º¸¿©Áİ´Ï´Ù.
+			// ë§ˆìš°ìŠ¤ê°€ ë‹¤ë¥¸ ìºë¦­í„° ìœ„ì— ìˆë‹¤ë©´ ë‹¤ë¥¸ ìºë¦­í„° ì •ë³´ë¥¼ ë³´ì—¬ì¤ë‹ˆë‹¤.
 			else for (auto& it : g_UserInfoList)
 			{
 				if (CheckPointInRect(mousePos.x, mousePos.y, it->X * 20, it->Y * 20, 20, 20))
@@ -262,27 +294,27 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 			}
 			///////////////////////////////////////////////////////////////////////////
 
-			// È­¸é¿¡ ±×¸®±â¸¦ Á¾·áÇÕ´Ï´Ù.
+			// í™”ë©´ì— ê·¸ë¦¬ê¸°ë¥¼ ì¢…ë£Œí•©ë‹ˆë‹¤.
 			Ds->EndDraw();
 		}
 		
 		Sleep(1);
 	}
 
-	// ¸®¼Ò½º¸¦ ÇØÁ¦ÇÕ´Ï´Ù.
+	// ë¦¬ì†ŒìŠ¤ë¥¼ í•´ì œí•©ë‹ˆë‹¤.
 	delete font;
 	delete stringFormat;
 	delete whiteBrush;
 	delete blackBrush;
 	delete colorKey;
 
-	// ¼ÒÄÏÀ» Á¾·áÇÕ´Ï´Ù.
+	// ì†Œì¼“ì„ ì¢…ë£Œí•©ë‹ˆë‹¤.
 	closesocket(g_Socket);
 
-	// µğ½ºÇÃ·¹ÀÌ Å¬·¡½ºÀÇ ÀÎ½ºÅÏ½º¸¦ ¹İÈ¯ÇÕ´Ï´Ù.
+	// ë””ìŠ¤í”Œë ˆì´ í´ë˜ìŠ¤ì˜ ì¸ìŠ¤í„´ìŠ¤ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.
 	Ds->Release();
 
-	// ÀÌ¹ÌÁöµéÀ» ¹İÈ¯ÇÕ´Ï´Ù.
+	// ì´ë¯¸ì§€ë“¤ì„ ë°˜í™˜í•©ë‹ˆë‹¤.
 	Images::Release();
 
 	///////////////////////////////////////////////////////////////////////////
