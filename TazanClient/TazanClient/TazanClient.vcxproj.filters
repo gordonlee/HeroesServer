@@ -70,7 +70,4 @@
       <Filter>Packet</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Assignment.vcproj" />
-  </ItemGroup>
 </Project>

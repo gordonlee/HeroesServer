@@ -54,7 +54,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	RegisterClass(&WndClass);
 
 	// 윈도우 크기가 클라이언트 영역을 기준으로 만들어지도록 한다.
-	RECT appClientRect = { 0, 0, g_appWidth, g_appHeight };
+	RECT appClientRect = { 0, 0, g_appWidth + 200, g_appHeight };
 	AdjustWindowRect(&appClientRect, WS_OVERLAPPEDWINDOW, FALSE);
 
 	g_hWnd=CreateWindow(App_ClassName, App_Name, WS_CAPTION | WS_SYSMENU,
@@ -156,7 +156,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 					{
 						MessageBox(g_hWnd, TEXT("Server Connect Failed (Retry Count : 40)"), TEXT("Critical Error"), MB_ICONERROR);
 						return -1;
-						break;
 					}
 				}
 			}
@@ -205,6 +204,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 	g_UserInfoList.push_back(new UserInfo(2, 6, 3, Direction::Right));
 	g_UserInfoList.push_back(new UserInfo(2, 7, 3, Direction::Down));*/
 
+	// 화면에 어떤 내용을 표시할 지 결정합니다.
+	int DisplayIndex = 0;
+
 	// 루프를 시작합니다.
 	ZeroMemory(&Message, sizeof(Message));
 	while(Message.message != WM_QUIT)
@@ -228,77 +230,125 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance
 				MessageBox(g_hWnd, buffer, TEXT("Click"), MB_OK);
 				break;
 			}
+			case WM_RBUTTONDOWN:
+			{
+				++DisplayIndex;
+				DisplayIndex %= 2;
+				break;
+			}
 			}
 		}
 
-		DWORD endTime = timeGetTime();
-		if (endTime - startTime >= g_fpsElapsed)
+		// 그래픽적인 요소를 보여줍니다.
+		if (DisplayIndex == 0)
 		{
-			startTime = endTime;
-
-			// 화면에 그리기를 시작합니다.
-			Ds->BeginDraw();
-
-			///////////////////////////////////////////////////////////////////////////
-			// 바닥 타일을 그립니다.
-			for (int i = 0; i < 30; ++i)
+			DWORD endTime = timeGetTime();
+			if (endTime - startTime >= g_fpsElapsed)
 			{
-				for (int j = 0; j < 30; ++j)
+				startTime = endTime;
+
+				// 화면에 그리기를 시작합니다.
+				Ds->BeginDraw(Color(255,255,255));
+
+				///////////////////////////////////////////////////////////////////////////
+				// 바닥 타일을 그립니다.
+				for (int i = 0; i < 30; ++i)
 				{
-					if (CheckPointInRect(mousePos.x, mousePos.y, i*20, j*20, 20, 20))
+					for (int j = 0; j < 30; ++j)
 					{
-						Ds->pBackBuffer->DrawImage(Images::pImgOveredTile, PointF(i * 20.f, j * 20.f));
-					}
-					else
-					{
-						Ds->pBackBuffer->DrawImage(Images::pImgTile, PointF(i * 20.f, j * 20.f));
+						if (CheckPointInRect(mousePos.x, mousePos.y, i * 20, j * 20, 20, 20))
+						{
+							Ds->pBackBuffer->DrawImage(Images::pImgOveredTile, PointF(i * 20.f, j * 20.f));
+						}
+						else
+						{
+							Ds->pBackBuffer->DrawImage(Images::pImgTile, PointF(i * 20.f, j * 20.f));
+						}
 					}
 				}
-			}
-			///////////////////////////////////////////////////////////////////////////
-			///////////////////////////////////////////////////////////////////////////
-			// 내 캐릭터를 그립니다.
-			// 타일의 크기는 20*20인데 캐릭터 크기는 18*20이므로 기준 좌표에서 x좌표에 1을 더해서 그려줍니다.
-			Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
-				RectF(g_MyUserInfo.X * 20.f + 1, g_MyUserInfo.Y * 20.f, 18.f, 20.f),
-				0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
-			///////////////////////////////////////////////////////////////////////////
-			///////////////////////////////////////////////////////////////////////////
-			// 다른 캐릭터를 그립니다.
-			for (auto& it : g_UserInfoList)
-			{
+				///////////////////////////////////////////////////////////////////////////
+				///////////////////////////////////////////////////////////////////////////
+				// 내 캐릭터를 그립니다.
+				// 타일의 크기는 20*20인데 캐릭터 크기는 18*20이므로 기준 좌표에서 x좌표에 1을 더해서 그려줍니다.
 				Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
-					RectF(it->X * 20.f + 1, it->Y * 20.f, 18.f, 20.f),
-					0.f, it->UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
-			}
-			///////////////////////////////////////////////////////////////////////////
-			///////////////////////////////////////////////////////////////////////////
-			// 마우스가 내 캐릭터 위에 있다면 내 캐릭터 정보를 보여줍니다.
-			if (CheckPointInRect(mousePos.x, mousePos.y, g_MyUserInfo.X * 20, g_MyUserInfo.Y * 20, 20, 20))
-			{
-				wchar_t buf[256];
-				wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), g_MyUserInfo.UserID, g_MyUserInfo.X, g_MyUserInfo.Y, GetDirectionToString(g_MyUserInfo.UserDirection));
-				Ds->pBackBuffer->FillRectangle(blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
-				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(mousePos.x, mousePos.y, 150, 50), stringFormat, whiteBrush);
-			}
-			///////////////////////////////////////////////////////////////////////////
-			///////////////////////////////////////////////////////////////////////////
-			// 마우스가 다른 캐릭터 위에 있다면 다른 캐릭터 정보를 보여줍니다.
-			else for (auto& it : g_UserInfoList)
-			{
-				if (CheckPointInRect(mousePos.x, mousePos.y, it->X * 20, it->Y * 20, 20, 20))
+					RectF(g_MyUserInfo.X * 20.f + 1, g_MyUserInfo.Y * 20.f, 18.f, 20.f),
+					0.f, g_MyUserInfo.UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
+				///////////////////////////////////////////////////////////////////////////
+				///////////////////////////////////////////////////////////////////////////
+				// 다른 캐릭터를 그립니다.
+				for (auto& it : g_UserInfoList)
+				{
+					Ds->pBackBuffer->DrawImage(Images::pImgCharacter,
+						RectF(it->X * 20.f + 1, it->Y * 20.f, 18.f, 20.f),
+						0.f, it->UserDirection * 20.f, 18.f, 20.f, Unit::UnitPixel, colorKey);
+				}
+				///////////////////////////////////////////////////////////////////////////
+				///////////////////////////////////////////////////////////////////////////
+				// 마우스가 내 캐릭터 위에 있다면 내 캐릭터 정보를 보여줍니다.
+				if (CheckPointInRect(mousePos.x, mousePos.y, g_MyUserInfo.X * 20, g_MyUserInfo.Y * 20, 20, 20))
 				{
 					wchar_t buf[256];
-					wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), it->UserID, it->X, it->Y, GetDirectionToString(it->UserDirection));
+					wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), g_MyUserInfo.UserID, g_MyUserInfo.X, g_MyUserInfo.Y, GetDirectionToString(g_MyUserInfo.UserDirection));
 					Ds->pBackBuffer->FillRectangle(blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
 					Ds->pBackBuffer->DrawString(buf, -1, font, RectF(mousePos.x, mousePos.y, 150, 50), stringFormat, whiteBrush);
-					break;
 				}
-			}
-			///////////////////////////////////////////////////////////////////////////
+				///////////////////////////////////////////////////////////////////////////
+				///////////////////////////////////////////////////////////////////////////
+				// 마우스가 다른 캐릭터 위에 있다면 다른 캐릭터 정보를 보여줍니다.
+				else for (auto& it : g_UserInfoList)
+				{
+					if (CheckPointInRect(mousePos.x, mousePos.y, it->X * 20, it->Y * 20, 20, 20))
+					{
+						wchar_t buf[256];
+						wsprintf(buf, TEXT("[ID(X,Y) : Direction]\r\n[%d(%d,%d) : %s]"), it->UserID, it->X, it->Y, GetDirectionToString(it->UserDirection));
+						Ds->pBackBuffer->FillRectangle(blackBrush, Rect(mousePos.x, mousePos.y, 150, 50));
+						Ds->pBackBuffer->DrawString(buf, -1, font, RectF(mousePos.x, mousePos.y, 150, 50), stringFormat, whiteBrush);
+						break;
+					}
+				}
+				///////////////////////////////////////////////////////////////////////////
 
-			// 화면에 그리기를 종료합니다.
-			Ds->EndDraw();
+				// 화면에 그리기를 종료합니다.
+				Ds->EndDraw();
+			}
+		}
+		else if (DisplayIndex == 1)
+		{
+			DWORD endTime = timeGetTime();
+			if (endTime - startTime >= g_fpsElapsed)
+			{
+				startTime = endTime;
+
+				// 화면에 그리기를 시작합니다.
+				Ds->BeginDraw(Color(255,255,255));
+
+				///////////////////////////////////////////////////////////////////////////
+				// 배경 박스를 그립니다.
+				Ds->pBackBuffer->FillRectangle(blackBrush, Rect(10, 10, g_appWidth - 20, 20));
+				Ds->pBackBuffer->FillRectangle(blackBrush, Rect(10, 10, g_appWidth - 20, 20));
+				Ds->pBackBuffer->FillRectangle(blackBrush, Rect(10, 40, g_appWidth - 20, g_appHeight - 50));
+				Ds->pBackBuffer->FillRectangle(blackBrush, Rect(20, 120, g_appWidth - 40, 20));
+
+				// 텍스트를 그립니다.
+				wchar_t buf[256];
+				wsprintf(buf, TEXT("Stress Client Mangement Display"));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(10, 10, g_appWidth - 20, 20), stringFormat, whiteBrush);
+				wsprintf(buf, TEXT("Key \'S\' : Start, Key \'D\' : Stop"));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(20, 50, g_appWidth - 40, 15), NULL, whiteBrush);
+				wsprintf(buf, TEXT("Number \'1\' : Only Echo, Client Count[1000], Send Per A Second[10], Buffer Size[1024]"));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(20, 65, g_appWidth - 40, 15), NULL, whiteBrush);
+				wsprintf(buf, TEXT("Number \'2\' : Only Broadcast, Client Count[100], Send Per A Second[5], Buffer Size[1024]"));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(20, 80, g_appWidth - 40, 15), NULL, whiteBrush);
+				wsprintf(buf, TEXT("Number \'3\' : AI, Client Count[100]"));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(20, 95, g_appWidth - 40, 15), NULL, whiteBrush);
+
+				wsprintf(buf, TEXT("Clients Status"));
+				Ds->pBackBuffer->DrawString(buf, -1, font, RectF(20, 120, g_appWidth - 40, 20), stringFormat, whiteBrush);
+				///////////////////////////////////////////////////////////////////////////
+
+				// 화면에 그리기를 종료합니다.
+				Ds->EndDraw();
+			}
 		}
 		
 		Sleep(1);

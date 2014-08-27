@@ -7,8 +7,21 @@
 
 #include "Packet.h"
 
+HWND hListbox;
+HFONT hFont;
 char ReadBuffer[65536];
 int CurrentReadLength = 0;
+TCHAR buf[256];
+
+const TCHAR* GetCurrentTimeToString()
+{
+	time_t t = time(0);   // get time now
+	tm now;
+	localtime_s(&now, &t);
+	wsprintf(buf, TEXT("  %04d.%02d.%02d %02d:%02d:%02d"), now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+
+	return buf;
+}
 
 // 메인 윈도우의 메시지 프로시저입니다.
 LRESULT CALLBACK AppMsgProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam)
@@ -17,6 +30,11 @@ LRESULT CALLBACK AppMsgProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam)
 	{
 	case WM_CREATE:
 	{
+		hListbox = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("LISTBOX"), NULL, WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_AUTOVSCROLL,
+			600, 0, 200, 300, hWnd, NULL, g_hInst, NULL);
+		hFont = CreateFont(15, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_SWISS, TEXT("Arial"));
+		SendMessage(hListbox, WM_SETFONT, (WPARAM)hFont, 0);
+
 		return 0;
 	}
 
@@ -62,6 +80,17 @@ LRESULT CALLBACK AppMsgProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam)
 							g_UserInfoList.push_back(&user[i]);
 						}
 
+						SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)TEXT("<LoginResultMessage>"));
+						SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)GetCurrentTimeToString());
+						wsprintf(buf, TEXT("  MY ID[%d], POS[%d,%d] : %s"), g_MyUserInfo.UserID, g_MyUserInfo.X, g_MyUserInfo.Y, GetDirectionToString(g_MyUserInfo.UserDirection));
+						SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)buf);
+						for (int i = 0; i < msg->UserCount; ++i)
+						{
+							g_UserInfoList.push_back(&user[i]);
+							wsprintf(buf, TEXT("  Other ID[%d], POS[%d,%d] : %s"), user[i].UserID, user[i].X, user[i].Y, GetDirectionToString(user[i].UserDirection));
+							SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)buf);
+						}
+
 						break;
 					}
 					case JoinNewUserFlag:
@@ -71,12 +100,17 @@ LRESULT CALLBACK AppMsgProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam)
 						*user = msg->NewUserInfo;
 						g_UserInfoList.push_back(user);
 
+						SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)TEXT("<JoinNewUserMessage>"));
+						SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)GetCurrentTimeToString());
+						wsprintf(buf, TEXT("  New ID[%d], POS[%d,%d] : %s"), user->UserID, user->X, user->Y, GetDirectionToString(user->UserDirection));
+						SendMessage(hListbox, LB_ADDSTRING, 0, (LPARAM)buf);
+
 						break;
 					}
 					}
 				}
 
-				CurrentReadLength -= packetHeader->DataSize + 4;
+				CurrentReadLength -= packetHeader->DataSize + sizeof(PacketHeader);
 				memmove(ReadBuffer, ReadBuffer + packetHeader->DataSize + 4, CurrentReadLength);
 			}
 
@@ -92,6 +126,12 @@ LRESULT CALLBACK AppMsgProc(HWND hWnd,UINT iMessage,WPARAM wParam,LPARAM lParam)
 			break;
 		}
 		}
+
+		// 자동 스크롤을 위해
+		int itemCount = SendMessage(hListbox, LB_GETCOUNT, 0, 0);
+		SendMessage(hListbox, LB_SETCURSEL, itemCount - 1, 0);
+		SendMessage(hListbox, LB_SETCURSEL, -1, 0);
+		UpdateWindow(hListbox);
 
 		return 0;
 	}
