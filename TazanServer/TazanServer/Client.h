@@ -23,6 +23,7 @@ public:
 public:
 	bool IsLogin;
 	UserInfo ClientUserInfo;
+	int sendcount;
 
 protected:
 	TazanServer* MyTazan;

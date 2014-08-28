@@ -17,7 +17,7 @@ private:
 private:
 	std::set<std::shared_ptr<Client>> Entities;
 public:
-	std::set<std::shared_ptr<Client>>& GetEntities() { return Entities; }
+	std::set<std::shared_ptr<Client>> GetEntities() { Lock lock(lockSource); return Entities; }
 public:
 	void InsertClient(std::shared_ptr<Client> Client) { Lock lock(lockSource); Entities.insert(Client); }
 	void EraseClient(std::shared_ptr<Client> Client) { Lock lock(lockSource); Entities.erase(Client); }

@@ -7,9 +7,6 @@
 int main(int argc, char* argv[])
 {
 	InitPacket();
-	std::string s = "hihihihihi";
-	printf("%d\n", sizeof(std::string));
-	printf("%d\n", sizeof(s));
 
 	try
 	{

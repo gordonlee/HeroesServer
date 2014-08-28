@@ -13,7 +13,7 @@ MakePacketHandler(LoginRequestMessage, 10)
 	LoginRequestMessage* packet = (LoginRequestMessage*)inPacket;
 	if (packet->checksum == 0x55)
 	{
-		std::set<std::shared_ptr<Client>>& Entities = server->GetEntities();
+		std::set<std::shared_ptr<Client>> Entities = server->GetEntities();
 
 		int LoginedUserCount = 0;
 
@@ -46,6 +46,7 @@ MakePacketHandler(LoginRequestMessage, 10)
 			}
 		}
 		client->ClientUserInfo.UserDirection = Direction::Down;
+		client->sendcount = 1 + LoginedUserCount;
 
 		printf("[%d] Login : (%d,%d)\n", client->ClientUserInfo.UserID, client->ClientUserInfo.X, client->ClientUserInfo.Y);
 
@@ -65,6 +66,7 @@ MakePacketHandler(LoginRequestMessage, 10)
 			if (it->IsLogin == true)
 			{
 				it->DoWrite(psJoinNewUser);
+				it->sendcount++;
 				psLoginResult->AddData(&it->ClientUserInfo, sizeof(UserInfo));
 			}
 		}

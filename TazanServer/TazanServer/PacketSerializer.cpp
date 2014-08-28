@@ -23,6 +23,7 @@ bool PacketSerializer::AddData(void* data, int length)
 {
 	if (BufferCurrentLength + length > BufferSize)
 	{
+		printf("Fetal : PacketSerializer Buffer Overflow\n");
 		return false;
 	}
 

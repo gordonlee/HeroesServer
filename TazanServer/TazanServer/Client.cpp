@@ -31,6 +31,22 @@ void Client::OnConnected(TazanServer* cheetah)
 void Client::OnDisconnect()
 {
 	MyTazan->EraseClient(shared_from_this());
+
+	if (IsLogin == true)
+	{
+		std::set<std::shared_ptr<Client>> Entities = MyTazan->GetEntities();
+
+		PacketHeader packetHeader = { sizeof(int), 13, 0x55 };
+		PacketSerializer* packet = new PacketSerializer(MyTazan->GetLockSource(), sizeof(PacketHeader) + packetHeader.dataSize);
+		packet->AddData(&packetHeader, sizeof(PacketHeader));
+		packet->AddData(&ClientUserInfo.UserID, sizeof(int));
+		packet->SetRefCount(Entities.size());
+		printf("%d Leave, So Send to %dth\n", ClientUserInfo.UserID, Entities.size());
+		for (auto& it : Entities)
+		{
+			it->DoWrite(packet);
+		}
+	}
 }
 
 void Client::DoRead()
@@ -61,14 +77,11 @@ void Client::DoRead()
 			CurrentReadLength += length;
 
 			PacketHeader* packetHeader = (PacketHeader*)ClientReadBuffer;
-			if (packetHeader->dataSize + 4 <= CurrentReadLength)
+			while (packetHeader->dataSize + sizeof(PacketHeader) <= CurrentReadLength)
 			{
-				CurrentReadLength -= packetHeader->dataSize + 4;
+				CurrentReadLength -= packetHeader->dataSize + sizeof(PacketHeader);
 				HandlePacket(packetHeader, ((Client*)this), MyTazan);
-				memmove(ClientReadBuffer, ClientReadBuffer + packetHeader->dataSize + 4, CurrentReadLength);
-			}
-			else
-			{
+				memmove(ClientReadBuffer, ClientReadBuffer + packetHeader->dataSize + sizeof(PacketHeader), CurrentReadLength);
 			}
 
 			DoRead();
