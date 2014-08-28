@@ -71,7 +71,6 @@
             // 
             // renderTimer
             // 
-            this.renderTimer.Enabled = true;
             this.renderTimer.Tick += new System.EventHandler(this.renderTimer_Tick);
             // 
             // textBox_CurrentClientCount

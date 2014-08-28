@@ -23,10 +23,19 @@ namespace TazanClient
         public int X;
         public int Y;
         public int Direction;
+        public bool IsShow = true;
+
+        public override string ToString()
+        {
+            return string.Format("[{0}]({1},{2})<{3}>", UserID, X, Y, Direction);
+        }
     }
 
     class AsyncTcpClient
     {
+        public Main mainForm = null;
+        public Object lockObejct = new Object();
+
         public const string ServerHost = "127.0.0.1";
         public const int ServerPort = 9000;
 
@@ -39,8 +48,10 @@ namespace TazanClient
         public AsyncTcpClient() { }
         ~AsyncTcpClient() { }
 
-        public void Start()
+        public void Start(Main mainForm)
         {
+            this.mainForm = mainForm;
+
             IPAddress ipAddress = Dns.Resolve(ServerHost).AddressList[0];
             IPEndPoint remoteEP = new IPEndPoint(ipAddress, ServerPort);
 
@@ -57,6 +68,9 @@ namespace TazanClient
                 client.socket.EndConnect(ar);
 
                 // Connect Success
+                StartReceive(client);
+
+                // LoginRequestMessage
                 BinaryWriter packetWriter = new BinaryWriter(new MemoryStream());
                 packetWriter.Write((short)0);
                 packetWriter.Write((byte)10);
@@ -65,8 +79,6 @@ namespace TazanClient
                 BinaryReader packetReader = new BinaryReader(packetWriter.BaseStream);
                 byte[] packet = packetReader.ReadBytes(4);
                 StartSend(client, packet);
-
-                StartReceive(client);
             }
             catch (Exception e)
             {
@@ -88,6 +100,7 @@ namespace TazanClient
             }
         }
 
+        int a = 0;
         private void ReceiveCallback(IAsyncResult ar)
         {
             try
@@ -95,10 +108,11 @@ namespace TazanClient
                 ClientObject client = (ClientObject)ar.AsyncState;
 
                 int readBytes = client.socket.EndReceive(ar);
-                if (readBytes > 0)
-                {
-                    client.readBufferLength += readBytes;
+                
+                client.readBufferLength += readBytes;
 
+                while (client.readBufferLength >= 4)
+                {
                     // Packet Processing
                     BinaryReader packetReader = new BinaryReader(new MemoryStream(client.readBuffer));
                     short dataSize = (short)(packetReader.ReadInt16() + 4);
@@ -120,25 +134,7 @@ namespace TazanClient
                                         userInfo_.Direction = packetReader.ReadInt32();
 
                                         int UserCount = packetReader.ReadInt32();
-                                        lock (otherUserInfo)
-                                        {
-                                            for (int i = 0; i < UserCount; ++i)
-                                            {
-                                                UserInfo info = new UserInfo();
-                                                info.UserID = packetReader.ReadInt32();
-                                                info.X = packetReader.ReadInt32();
-                                                info.Y = packetReader.ReadInt32();
-                                                info.Direction = packetReader.ReadInt32();
-                                                otherUserInfo_.Add(info);
-                                            }
-                                        }
-
-                                        break;
-                                    }
-                                case 12:
-                                    // JoinNewUserMessage
-                                    {
-                                        lock (otherUserInfo)
+                                        for (int i = 0; i < UserCount; ++i)
                                         {
                                             UserInfo info = new UserInfo();
                                             info.UserID = packetReader.ReadInt32();
@@ -150,23 +146,47 @@ namespace TazanClient
 
                                         break;
                                     }
-                                case 13:
+                                case 12:
+                                    // JoinNewUserMessage
                                     {
+                                        UserInfo info = new UserInfo();
+                                        info.UserID = packetReader.ReadInt32();
+                                        info.X = packetReader.ReadInt32();
+                                        info.Y = packetReader.ReadInt32();
+                                        info.Direction = packetReader.ReadInt32();
+                                        otherUserInfo_.Add(info);
+
+                                        break;
+                                    }
+                                case 13:
+                                    // ClientLeaveMessage
+                                    {
+                                        int LeaveUserID = packetReader.ReadInt32();
+                                        foreach (var info in otherUserInfo_)
+                                        {
+                                            if (info.UserID == LeaveUserID)
+                                            {
+                                                info.IsShow = false;
+                                                otherUserInfo_.Remove(info);
+                                                break;
+                                            }
+                                        }
+
                                         break;
                                     }
                             }
                         }
-                        
+
+                        // 버퍼 앞으로 당긴다.
                         client.readBufferLength -= dataSize;
-                        Buffer.BlockCopy(client.readBuffer, dataSize, client.readBuffer, 0, client.readBufferLength);
+                        for (int i = 0; i < client.readBufferLength; ++i)
+                        {
+                            client.readBuffer[i] = client.readBuffer[i + dataSize];
+                        }
                     }
-
-                    StartReceive(client);
                 }
-                else
-                {
 
-                }
+                StartReceive(client);
             }
             catch (Exception e)
             {

@@ -21,6 +21,8 @@ namespace TazanClient
         private void Main_Load(object sender, EventArgs e)
         {
             Tazan.inst.InitializeTazan(panel_Render);
+            Tazan.inst.InitializeClients(this);
+            renderTimer.Enabled = true;
         }
 
         private void textbox_OnlyNum_KeyPress(object sender, KeyPressEventArgs e)
@@ -43,8 +45,12 @@ namespace TazanClient
         private void button_Stop_Click(object sender, EventArgs e)
         {
             Tazan.inst.index++;
-            Tazan.inst.index %= Tazan.clients_count;
-            Tazan.inst.InitializeClients();
+            Tazan.inst.index %= Tazan.inst.clients_count;
+            textBox_ControledUserID.Text = Tazan.inst.clients[Tazan.inst.index].userInfo.UserID.ToString();
+            textBox_ControledPos.Text = Tazan.inst.clients[Tazan.inst.index].userInfo.X.ToString();
+            textBox_ControledPos.Text += ", ";
+            textBox_ControledPos.Text += Tazan.inst.clients[Tazan.inst.index].userInfo.Y.ToString();
+            textBox_ControledDirection.Text = Tazan.inst.clients[Tazan.inst.index].userInfo.Direction.ToString();
         }
     }
 }

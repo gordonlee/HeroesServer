@@ -23,8 +23,8 @@ namespace TazanClient
         private Texture textureCharacter = null;
 
         //private AsyncTcpClient client = new AsyncTcpClient();
-        public const int clients_count = 30;
-        private AsyncTcpClient[] clients = new AsyncTcpClient[clients_count];
+        public int clients_count = 30;
+        public AsyncTcpClient[] clients = null;
 
         private Tazan()
         {
@@ -54,18 +54,14 @@ namespace TazanClient
            // client.Start();
         }
 
-        public void InitializeClients()
+        public void InitializeClients(Main mainForm)
         {
-            if (clients[index] == null)
+            clients = new AsyncTcpClient[clients_count];
+            for (int i = 0; i < clients_count; ++i)
             {
-                clients[index] = new AsyncTcpClient();
-                clients[index].Start();
+                clients[i] = new AsyncTcpClient();
+                clients[i].Start(mainForm);
             }
-            //for (int i = 0; i < clients_count; ++i)
-            //{
-            //    clients[i] = new AsyncTcpClient();
-            //    clients[i].Start();
-            //}
         }
 
         public int index = -1;
@@ -93,28 +89,20 @@ namespace TazanClient
                 }
             }
 
-            // Draw Character
-            //foreach(var user in client.otherUserInfo)
-            //{
-            //    mainSprite.Draw2D(textureCharacter, new Rectangle(0, 0 * user.Direction, 20, 20), new SizeF(20.0f, 20.0f), new Point(user.X * 20, user.Y * 20), Color.White);
-            //}
-            //mainSprite.Draw2D(textureCharacter, new Rectangle(0, 0 * client.userInfo.Direction, 20, 20), new SizeF(20.0f, 20.0f), new Point(client.userInfo.X * 20, client.userInfo.Y * 20), Color.White);
-            if (index >= 0) for (int i = index; i < index+1; ++i)
+            if (index >= 0 && index < clients_count)
             {
-                if (clients[i] != null)
+                if (clients[index] != null)
                 {
-                    //mainSprite.Draw2D(textureCharacter, new Rectangle(0, 0 * clients[i].userInfo.Direction, 20, 20), new SizeF(20.0f, 20.0f), new Point(clients[i].userInfo.X * 20, clients[i].userInfo.Y * 20), Color.White);
+                    mainSprite.Draw2D(textureCharacter, new Rectangle(0, 0 * clients[index].userInfo.Direction, 20, 20), new Rectangle(0, 0, 20, 20), new Point(clients[index].userInfo.X * 20, clients[index].userInfo.Y * 20), Color.White);
 
-                    if (clients[i].otherUserInfo != null)
+                    if (clients[index].otherUserInfo != null)
                     {
-                        int size = 0;
-                        lock (clients[i].otherUserInfo)
-                        {
-                            size = clients[i].otherUserInfo.Count;
-                        }
+                        int size = clients[index].otherUserInfo.Count;
                         for(int j = 0; j < size; ++j)
                         {
-                            mainSprite.Draw2D(textureCharacter, new Rectangle(0, 0 * clients[i].otherUserInfo[j].Direction, 20, 20), new SizeF(20.0f, 20.0f), new Point(clients[i].otherUserInfo[j].X * 20, clients[i].otherUserInfo[j].Y * 20), Color.White);
+                            if (clients[index].otherUserInfo[j].IsShow == false)
+                                continue;
+                            mainSprite.Draw2D(textureCharacter, new Rectangle(0, 0 * clients[index].otherUserInfo[j].Direction, 20, 20), new Rectangle(0, 0, 20, 20), new Point(clients[index].otherUserInfo[j].X * 20, clients[index].otherUserInfo[j].Y * 20), Color.White);
                         }
                     }
                 }
