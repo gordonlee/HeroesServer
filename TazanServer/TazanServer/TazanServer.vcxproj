@@ -92,6 +92,7 @@
     <ClInclude Include="Client.h" />
     <ClInclude Include="Lock.h" />
     <ClInclude Include="LoginMessage.h" />
+    <ClInclude Include="MoveMessage.h" />
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketSerializer.h" />
     <ClInclude Include="stdafx.h" />
@@ -106,6 +107,7 @@
     <ClCompile Include="Lock.cpp" />
     <ClCompile Include="LoginMessage.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MoveMessage.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PacketSerializer.cpp" />
     <ClCompile Include="stdafx.cpp">
