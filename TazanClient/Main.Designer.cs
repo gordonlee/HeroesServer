@@ -86,9 +86,9 @@
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(6, 56);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(168, 12);
+            this.label1.Size = new System.Drawing.Size(173, 12);
             this.label1.TabIndex = 4;
-            this.label1.Text = "Client Count (Current / Max)";
+            this.label1.Text = "클라이언트 수 (접속수/목표수)";
             // 
             // groupBox1
             // 
@@ -116,7 +116,7 @@
             this.groupBox1.Size = new System.Drawing.Size(182, 576);
             this.groupBox1.TabIndex = 5;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Clients Management";
+            this.groupBox1.Text = "클라이언트 관리";
             // 
             // groupBox3
             // 
@@ -131,7 +131,7 @@
             this.groupBox3.Size = new System.Drawing.Size(164, 95);
             this.groupBox3.TabIndex = 29;
             this.groupBox3.TabStop = false;
-            this.groupBox3.Text = "Controled Client";
+            this.groupBox3.Text = "컨트롤 중인 클라이언트";
             // 
             // textBox_ControledDirection
             // 
@@ -198,7 +198,7 @@
             this.groupBox2.Size = new System.Drawing.Size(164, 124);
             this.groupBox2.TabIndex = 21;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Selected Client";
+            this.groupBox2.Text = "선택한 클라이언트";
             // 
             // textBox_SelectedDirection
             // 
@@ -257,7 +257,7 @@
             this.button_SelectedControl.Name = "button_SelectedControl";
             this.button_SelectedControl.Size = new System.Drawing.Size(152, 23);
             this.button_SelectedControl.TabIndex = 22;
-            this.button_SelectedControl.Text = "Control";
+            this.button_SelectedControl.Text = "컨트롤 하기";
             this.button_SelectedControl.UseVisualStyleBackColor = true;
             // 
             // radioButton_AutoSetting
@@ -265,9 +265,9 @@
             this.radioButton_AutoSetting.AutoSize = true;
             this.radioButton_AutoSetting.Location = new System.Drawing.Point(8, 467);
             this.radioButton_AutoSetting.Name = "radioButton_AutoSetting";
-            this.radioButton_AutoSetting.Size = new System.Drawing.Size(90, 16);
+            this.radioButton_AutoSetting.Size = new System.Drawing.Size(75, 16);
             this.radioButton_AutoSetting.TabIndex = 20;
-            this.radioButton_AutoSetting.Text = "Auto Setting";
+            this.radioButton_AutoSetting.Text = "자동 설정";
             this.radioButton_AutoSetting.UseVisualStyleBackColor = true;
             // 
             // radioButton_ManualSetting
@@ -276,10 +276,10 @@
             this.radioButton_ManualSetting.Checked = true;
             this.radioButton_ManualSetting.Location = new System.Drawing.Point(8, 445);
             this.radioButton_ManualSetting.Name = "radioButton_ManualSetting";
-            this.radioButton_ManualSetting.Size = new System.Drawing.Size(107, 16);
+            this.radioButton_ManualSetting.Size = new System.Drawing.Size(75, 16);
             this.radioButton_ManualSetting.TabIndex = 19;
             this.radioButton_ManualSetting.TabStop = true;
-            this.radioButton_ManualSetting.Text = "Manual Setting";
+            this.radioButton_ManualSetting.Text = "수동 설정";
             this.radioButton_ManualSetting.UseVisualStyleBackColor = true;
             // 
             // button_Stop
@@ -288,7 +288,7 @@
             this.button_Stop.Name = "button_Stop";
             this.button_Stop.Size = new System.Drawing.Size(170, 23);
             this.button_Stop.TabIndex = 18;
-            this.button_Stop.Text = "Stop";
+            this.button_Stop.Text = "정지";
             this.button_Stop.UseVisualStyleBackColor = true;
             this.button_Stop.Click += new System.EventHandler(this.button_Stop_Click);
             // 
@@ -298,7 +298,7 @@
             this.button_AI.Name = "button_AI";
             this.button_AI.Size = new System.Drawing.Size(170, 23);
             this.button_AI.TabIndex = 17;
-            this.button_AI.Text = "AI";
+            this.button_AI.Text = "AI 테스트";
             this.button_AI.UseVisualStyleBackColor = true;
             // 
             // button_Broadcast
@@ -333,9 +333,9 @@
             this.label5.AutoSize = true;
             this.label5.Location = new System.Drawing.Point(6, 17);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(40, 12);
+            this.label5.Size = new System.Drawing.Size(57, 12);
             this.label5.TabIndex = 12;
-            this.label5.Text = "Status";
+            this.label5.Text = "현재 상태";
             // 
             // textBox_MaxClientCount
             // 
@@ -350,9 +350,9 @@
             this.label4.AutoSize = true;
             this.label4.Location = new System.Drawing.Point(6, 173);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(101, 12);
+            this.label4.Size = new System.Drawing.Size(85, 12);
             this.label4.TabIndex = 10;
-            this.label4.Text = "Average Elapsed";
+            this.label4.Text = "평균 지연 속도";
             // 
             // textBox_AverageElapsed
             // 
@@ -367,9 +367,9 @@
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(6, 134);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(99, 12);
+            this.label3.Size = new System.Drawing.Size(177, 12);
             this.label3.TabIndex = 8;
-            this.label3.Text = "Send Buffer Size";
+            this.label3.Text = "버퍼 크기 (Echo, Broadcast만)";
             // 
             // textBox_SendBufferSize
             // 
@@ -384,9 +384,9 @@
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(6, 95);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(116, 12);
+            this.label2.Size = new System.Drawing.Size(69, 12);
             this.label2.TabIndex = 6;
-            this.label2.Text = "Send Per A Second";
+            this.label2.Text = "초당 송신수";
             // 
             // textBox_SendPerASecond
             // 
@@ -403,6 +403,7 @@
             this.panel_Render.Name = "panel_Render";
             this.panel_Render.Size = new System.Drawing.Size(600, 600);
             this.panel_Render.TabIndex = 2;
+            this.panel_Render.MouseClick += new System.Windows.Forms.MouseEventHandler(this.panel_Render_MouseClick);
             this.panel_Render.MouseMove += new System.Windows.Forms.MouseEventHandler(this.panel_Render_MouseMove);
             // 
             // Main

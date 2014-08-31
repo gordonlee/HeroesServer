@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace TazanClient
 {
@@ -15,6 +16,14 @@ namespace TazanClient
         public const int readBufferSize = 32768;
         public byte[] readBuffer = new byte[readBufferSize];
         public int readBufferLength = 0;
+    }
+
+    public enum EDirection
+    {
+        Down = 0,
+        Left = 1,
+        Up= 2,
+        Right= 3
     }
 
     public class UserInfo
@@ -39,6 +48,9 @@ namespace TazanClient
         public const string ServerHost = "127.0.0.1";
         public const int ServerPort = 9000;
 
+        IPAddress ipAddress = null;
+        IPEndPoint remoteEP = null;
+
         public ClientObject clientObject = new ClientObject();
         public UserInfo userInfo { get { return userInfo_; } private set { } }
         private UserInfo userInfo_ = new UserInfo();
@@ -52,8 +64,8 @@ namespace TazanClient
         {
             this.mainForm = mainForm;
 
-            IPAddress ipAddress = Dns.Resolve(ServerHost).AddressList[0];
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, ServerPort);
+            ipAddress = Dns.Resolve(ServerHost).AddressList[0];
+            remoteEP = new IPEndPoint(ipAddress, ServerPort);
 
             clientObject.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             clientObject.socket.BeginConnect(remoteEP, new AsyncCallback(ConnectCallback), clientObject);
@@ -61,10 +73,10 @@ namespace TazanClient
 
         private void ConnectCallback(IAsyncResult ar)
         {
+            ClientObject client = (ClientObject)ar.AsyncState;
+
             try
             {
-                ClientObject client = (ClientObject)ar.AsyncState;
-
                 client.socket.EndConnect(ar);
 
                 // Connect Success
@@ -82,7 +94,7 @@ namespace TazanClient
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                client.socket.BeginConnect(remoteEP, new AsyncCallback(ConnectCallback), clientObject);
             }
         }
 
@@ -100,12 +112,17 @@ namespace TazanClient
             }
         }
 
-        int a = 0;
         private void ReceiveCallback(IAsyncResult ar)
         {
             try
             {
                 ClientObject client = (ClientObject)ar.AsyncState;
+
+                if (client.socket.Connected == false)
+                {
+                    client.socket.BeginConnect(remoteEP, new AsyncCallback(ConnectCallback), clientObject);
+                    return;
+                }
 
                 int readBytes = client.socket.EndReceive(ar);
                 
@@ -174,6 +191,34 @@ namespace TazanClient
 
                                         break;
                                     }
+                                case 21:
+                                    // MoveResultMessage
+                                    {
+                                        UserInfo moveInfo = new UserInfo();
+                                        moveInfo.UserID = packetReader.ReadInt32();
+                                        moveInfo.X = packetReader.ReadInt32();
+                                        moveInfo.Y = packetReader.ReadInt32();
+                                        moveInfo.Direction = packetReader.ReadInt32();
+
+                                        if (userInfo_.UserID == moveInfo.UserID)
+                                        {
+                                            userInfo_.X = moveInfo.X;
+                                            userInfo_.Y = moveInfo.Y;
+                                            userInfo_.Direction = moveInfo.Direction;
+                                        }
+                                        else foreach (var info in otherUserInfo_)
+                                        {
+                                            if (info.UserID == moveInfo.UserID)
+                                            {
+                                                info.X = moveInfo.X;
+                                                info.Y = moveInfo.Y;
+                                                info.Direction = moveInfo.Direction;
+                                                break;
+                                            }
+                                        }
+
+                                        break;
+                                    }
                             }
                         }
 
@@ -194,7 +239,7 @@ namespace TazanClient
             }
         }
 
-        private void StartSend(ClientObject client, byte[] data)
+        public void StartSend(ClientObject client, byte[] data)
         {
             try
             {
@@ -207,11 +252,17 @@ namespace TazanClient
             }
         }
 
-        private void SendCallback(IAsyncResult ar)
+        public void SendCallback(IAsyncResult ar)
         {
             try
             {
                 ClientObject client = (ClientObject)ar.AsyncState;
+
+                if (client.socket.Connected == false)
+                {
+                    client.socket.BeginConnect(remoteEP, new AsyncCallback(ConnectCallback), clientObject);
+                    return;
+                }
 
                 int bytesSent = client.socket.EndSend(ar);
             }
