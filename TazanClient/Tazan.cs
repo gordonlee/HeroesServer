@@ -127,12 +127,15 @@ namespace TazanClient
                         // 다른 캐릭
                         if (clients[index].otherUserInfo != null)
                         {
-                            int size = clients[index].otherUserInfo.Count;
-                            for (int j = 0; j < size; ++j)
+                            lock (clients[index].lockObejct)
                             {
-                                if (clients[index].otherUserInfo[j].IsShow == false)
-                                    continue;
-                                mainSprite.Draw2D(textureCharacter, new Rectangle(0, 20 * clients[index].otherUserInfo[j].Direction, 20, 20), new Rectangle(0, 0, 20, 20), new Point(clients[index].otherUserInfo[j].X * 20, clients[index].otherUserInfo[j].Y * 20), Color.White);
+                                int size = clients[index].otherUserInfo.Count;
+                                for (int j = 0; j < size; ++j)
+                                {
+                                    if (clients[index].otherUserInfo[j].IsShow == false)
+                                        continue;
+                                    mainSprite.Draw2D(textureCharacter, new Rectangle(0, 20 * clients[index].otherUserInfo[j].Direction, 20, 20), new Rectangle(0, 0, 20, 20), new Point(clients[index].otherUserInfo[j].X * 20, clients[index].otherUserInfo[j].Y * 20), Color.White);
+                                }
                             }
                         }
                     }

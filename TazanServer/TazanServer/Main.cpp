@@ -6,13 +6,6 @@
 
 int main(int argc, char* argv[])
 {
-	HWND h = FindWindow(NULL, L"Borderlands 2 (32-bit, DX9)");
-	while (true)
-	{
-		SendMessage(h, WM_KEYDOWN, VK_RETURN, 0);
-		SendMessage(h, WM_KEYUP, VK_RETURN, 0);
-	}
-
 	InitPacket();
 
 	try

@@ -158,7 +158,10 @@ namespace TazanClient
                                             info.X = packetReader.ReadInt32();
                                             info.Y = packetReader.ReadInt32();
                                             info.Direction = packetReader.ReadInt32();
-                                            otherUserInfo_.Add(info);
+                                            lock (lockObejct)
+                                            {
+                                                otherUserInfo_.Add(info);
+                                            }
                                         }
 
                                         break;
@@ -171,7 +174,10 @@ namespace TazanClient
                                         info.X = packetReader.ReadInt32();
                                         info.Y = packetReader.ReadInt32();
                                         info.Direction = packetReader.ReadInt32();
-                                        otherUserInfo_.Add(info);
+                                        lock (lockObejct)
+                                        {
+                                            otherUserInfo_.Add(info);
+                                        }
 
                                         break;
                                     }
@@ -184,7 +190,10 @@ namespace TazanClient
                                             if (info.UserID == LeaveUserID)
                                             {
                                                 info.IsShow = false;
-                                                otherUserInfo_.Remove(info);
+                                                lock (lockObejct)
+                                                {
+                                                    otherUserInfo_.Remove(info);
+                                                }
                                                 break;
                                             }
                                         }
